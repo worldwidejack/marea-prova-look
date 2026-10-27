@@ -39,7 +39,8 @@ export function creaPixel(renderer) {
       const pxUnitaDev = pxUnita * dpr;
       p = Math.max(2, Math.round(2.5 * pxUnitaDev / ALTEZZA_EROE_PX));
       unita = p / pxUnitaDev;
-      W = Math.ceil(wDev / p) + 2; H = Math.ceil(hDev / p) + 2;
+      // misure pari: i bordi dei pixel cadono sui multipli del lato del pixel (serve agli sprite disegnati a pixel)
+      W = Math.ceil(wDev / p) + 2; H = Math.ceil(hDev / p) + 2; W += W % 2; H += H % 2;
       rt.setSize(W, H);
       u.uP.value = p; u.uMisura.value.set(W, H);
       cam.left = -W * unita / 2; cam.right = W * unita / 2; cam.top = H * unita / 2; cam.bottom = -H * unita / 2;
@@ -51,6 +52,12 @@ export function creaPixel(renderer) {
       const a2 = Math.round(a / unita) * unita, b2 = Math.round(b / unita) * unita;
       resto.set(a - a2, b - b2);
       return v.clone().addScaledVector(DESTRA, a2 - a).addScaledVector(SU, b2 - b);
+    },
+    // un punto del mondo portato sulla griglia dei pixel (lungo destra e su dello schermo): uno sprite a pixel messo
+    // lì ha ogni suo pixel su un pixel dello schermo
+    agganciaPunto(x, y, z) {
+      const v = new THREE.Vector3(x, y, z), a = v.dot(DESTRA), b = v.dot(SU);
+      return v.addScaledVector(DESTRA, Math.round(a / unita) * unita - a).addScaledVector(SU, Math.round(b / unita) * unita - b);
     },
     disegna(scena, cam) {
       renderer.setRenderTarget(rt);

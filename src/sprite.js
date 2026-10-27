@@ -52,14 +52,16 @@ const FRAG = /* glsl */`
 const quad = new THREE.PlaneGeometry(1, 1);
 const orient = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(DESTRA, SU, VERSO_CAMERA));
 
-export async function caricaSprite() {
-  const elenco = await (await fetch('./sprite/elenco.json')).json();
+// nitido = disegni a pixel (prova dei look, versione di Riccardo): niente filtro, ogni pixel del disegno resta un quadrato
+export async function caricaSprite(cartella = './sprite/', { nitido = false, formato = 'webp' } = {}) {
+  const elenco = await (await fetch(cartella + 'elenco.json')).json();
   const carica = new THREE.TextureLoader();
   const texture = {};
-  await Promise.all(Object.keys(elenco).map((n) => carica.loadAsync(`./sprite/${n}.webp`).then((t) => {
+  await Promise.all(Object.keys(elenco).map((n) => carica.loadAsync(`${cartella}${n}.${formato}`).then((t) => {
     t.colorSpace = THREE.NoColorSpace;
     t.premultiplyAlpha = true;
     t.anisotropy = 4;
+    if (nitido) { t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; }
     texture[n] = t;
   })));
   return { elenco, texture, alfa: alfaDi(texture) };

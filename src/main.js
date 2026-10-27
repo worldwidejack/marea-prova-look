@@ -41,6 +41,10 @@ if (PIXEL) SOGLIA.value = 0.5;
 const g = creaGriglia();
 const [sprite, pronti] = await Promise.all([caricaSprite(), LOOK === 'disegni' ? {} : caricaModelli()]);
 const fab = creaFabbrica(scena, sprite);
+// la versione di Riccardo: il protagonista disegnato a pixel (3 viste, a sinistra lo specchio), se i disegni ci sono
+const spritePx = LOOK === 'sprite' ? await caricaSprite('./sprite_pixel/', { nitido: true, formato: 'png' }).catch(() => null) : null;
+const fabPx = spritePx ? creaFabbrica(scena, spritePx) : null;
+const PASSI = ['S', 'SE', 'E', 'NE', 'N'].every((d) => sprite.elenco[`eroe_${d}_4`]);
 const fab3 = creaFabbricaModelli(scena, pronti);
 const effetti = creaEffetti(scena);
 // gli edifici e la barca in 3D appena c'è il modello; le persone in 3D solo nei look col personaggio 3D
@@ -103,10 +107,10 @@ if (EROE3D) {
   eroe.o = fab3.crea('eroe', eroe.x, quotaDi(eroe.x, eroe.z), eroe.z);
   sagomaDietro(eroe.o.mesh);
 } else {
-  eroe.o = fab.crea('eroe_SE', eroe.x, quotaDi(eroe.x, eroe.z), eroe.z);
+  eroe.o = fabEroe().crea(fotogrammaEroe(), eroe.x, quotaDi(eroe.x, eroe.z), eroe.z);
   // la sagoma: lo stesso disegno sopra a tutto, mezzo trasparente, solo quando qualcosa lo copre (gli oggetti restano pieni:
   // farli trasparenti rompeva l'ordine di disegno e tagliava le cose dietro con righe dritte)
-  sagoma = fab.crea('eroe_SE', eroe.x, quotaDi(eroe.x, eroe.z), eroe.z);
+  sagoma = fabEroe().crea(fotogrammaEroe(), eroe.x, quotaDi(eroe.x, eroe.z), eroe.z);
   sagoma.mesh.material.depthTest = false; sagoma.mesh.renderOrder = 10;
   sagoma.opacita(0.5); sagoma.visibile(false);
 }
@@ -116,7 +120,20 @@ const ombraEroe = new THREE.Mesh(
 );
 ombraEroe.scale.set(1.15, 1, 0.75);
 scena.add(ombraEroe);
-const PASSI = ['S', 'SE', 'E', 'NE', 'N'].every((d) => sprite.elenco[`eroe_${d}_4`]);
+// il disegno del protagonista adesso: i 5 della prova 2.5D (eroe_<vista>_<passo>) o quelli a pixel (<vista>_<mossa>_<n>)
+function fabEroe() { return fabPx ?? fab; }
+function fotogrammaEroe() {
+  if (!fabPx) return PASSI && !eroe.fermo ? `eroe_${eroe.dir}_${1 + (Math.floor(eroe.passo) % 4)}` : 'eroe_' + eroe.dir;
+  const vista = { S: 'SE', SE: 'SE', E: 'E', NE: 'NE', N: 'NE' }[eroe.dir] ?? 'SE';
+  const m = eroe.mossa;
+  if (m) {
+    const k = m.t / m.durata;
+    if (m.tipo === 'scatto') return `${vista}_scatto_${k < 0.1 ? 1 : k < 0.3 ? 2 : k < 0.75 ? 3 : 4}`;
+    if (m.tipo === 'bevi') return `${vista}_bevi_${k < 0.25 ? 1 : k < 0.42 ? 2 : k < 0.78 ? 3 : 4}`;
+  }
+  if (eroe.fermo) return `${vista}_cammina_2`;
+  return `${vista}_cammina_${1 + (Math.floor(eroe.passo * 0.9) % 4)}`;
+}
 
 // le clip del protagonista 3D (nomi di Mixamo, poi quelli del segnaposto chr_base): si passa dall'una all'altra in dissolvenza
 const NOMI_CLIP = {
@@ -304,7 +321,7 @@ function aggiornaMossa(dt, y) {
 
 function mettiEroe(x, z, dir, specchio) {
   eroe.x = x; eroe.z = z; eroe.dir = dir; eroe.specchio = specchio;
-  eroe.o.disegno('eroe_' + dir, specchio);
+  eroe.o.disegno(fotogrammaEroe(), specchio);
   eroe.o.sposta(x, quotaDi(x, z), z);
 }
 
@@ -352,10 +369,15 @@ function aggiornaEroe(dt) {
     ombraEroe.position.set(eroe.x - 0.08, y + 0.01, eroe.z + 0.12);
     return;
   }
-  const n = PASSI && !eroe.fermo ? `eroe_${eroe.dir}_${1 + (Math.floor(eroe.passo) % 4)}` : 'eroe_' + eroe.dir;
+  const n = fotogrammaEroe();
   eroe.o.disegno(n, eroe.specchio);
-  const salto = !PASSI && !eroe.fermo ? Math.abs(Math.sin(eroe.passo * 0.5)) * 0.12 : 0;
-  eroe.o.sposta(eroe.x, y + salto, eroe.z);
+  const salto = !PASSI && !fabPx && !eroe.fermo ? Math.abs(Math.sin(eroe.passo * 0.5)) * 0.12 : 0;
+  // a pixel: il disegno sta sulla griglia dei pixel dello schermo (ogni suo pixel su un pixel)
+  const q = fabPx && pixel ? pixel.agganciaPunto(eroe.x, y, eroe.z) : new THREE.Vector3(eroe.x, y + salto, eroe.z);
+  eroe.o.sposta(q.x, q.y, q.z);
+  if (fabPx && eroe.mossa?.tipo === 'scatto' && (eroe.mossa.sciaPx = (eroe.mossa.sciaPx ?? 0) - dt) <= 0 && eroe.mossa.t < eroe.mossa.durata * 0.75) {
+    sciaPixel(n, eroe.specchio, q); eroe.mossa.sciaPx = 0.06;
+  }
   ombraEroe.position.set(eroe.x - 0.08, y + 0.01, eroe.z + 0.12);
   // sagoma: se il disegno di un oggetto alto copre il personaggio sullo schermo e lui ci sta dietro, si vede la sua sagoma
   // (copre = il disegno è pieno sopra la testa, il petto o le gambe del personaggio, guardando l'alfa vero del disegno)
@@ -367,7 +389,22 @@ function aggiornaEroe(dt) {
   sagoma.visibile(forzaSagoma > 0.03);
   sagoma.mesh.material.uniforms.uOpacita.value = 0.5 * forzaSagoma;
   sagoma.disegno(n, eroe.specchio);
-  sagoma.sposta(eroe.x, y + salto, eroe.z);
+  sagoma.sposta(q.x, q.y, q.z);
+}
+// le sagome che restano indietro nello scatto, per il protagonista a pixel: copie del disegno che svaniscono
+const scie = [];
+function sciaPixel(n, specchio, q) {
+  let s = scie.find((x) => x.t > 0.3);
+  if (!s) { if (scie.length >= 5) return; s = { o: fabPx.crea(n, q.x, q.y, q.z), t: 0 }; scie.push(s); }
+  s.o.disegno(n, specchio); s.o.sposta(q.x, q.y, q.z); s.o.visibile(true); s.t = 0;
+}
+function passoScie(dt) {
+  for (const s of scie) {
+    if (s.t > 0.3) continue;
+    s.t += dt;
+    s.o.opacita(Math.max(0.01, 0.5 * (1 - s.t / 0.3)));
+    if (s.t > 0.3) s.o.visibile(false);
+  }
 }
 
 let t0 = performance.now(), tempo = 0;
@@ -377,7 +414,10 @@ function ridimensiona() {
   renderer.setSize(w, h);
   camera.misura(w, h);
   // contorno: ~2,4 px sullo schermo nel look inchiostro, un pixel (poco meno) nel look pixel
-  if (pixel) { pixel.misura(camera.cam, w, h, camera.pxUnita()); SPESSORE.value = pixel.unita() * 0.85; }
+  if (pixel) {
+    pixel.misura(camera.cam, w, h, camera.pxUnita()); SPESSORE.value = pixel.unita() * 0.85;
+    if (spritePx) { for (const d of Object.values(spritePx.elenco)) d.s = 1 / pixel.unita(); eroe.o?.aggiorna(); }
+  }
   else SPESSORE.value = 2.4 / camera.pxUnita();
   interno?.misura(w, h);
 }
@@ -388,6 +428,7 @@ function passo(dt) {
   tempo += dt;
   if (camera.passo(dt)) fab.riorienta();
   effetti.passo(dt);
+  passoScie(dt);
   for (const a of abitanti) {
     if (a.o.dati.modo === '3d') a.o.interno.scale.y = 1 + Math.sin(tempo * 2.1 + a.fase) * 0.012; // respira
     else a.o.disegno(Math.floor(tempo / 1.1 + a.fase) % 2 && fab.ha(a.nome + '_2') ? a.nome + '_2' : a.nome);
