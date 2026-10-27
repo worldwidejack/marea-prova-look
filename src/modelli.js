@@ -18,9 +18,12 @@ export const CATALOGO = {
   barca: { file: 'barca.glb', giro: 0, piede: [4.0, 1.7], scatola: [4.0, 1.7, 1.0] },
   barista: { file: 'barista.glb', giro: 0, alto: 2.9, scatola: [0.9, 0.9, 2.9] },
   pescatore: { file: 'pescatore.glb', giro: 0, alto: 2.3, scatola: [0.9, 0.9, 2.0] },
-  eroe: {
+  // il protagonista: modello rigato da Mixamo con le sue mosse (strumenti/blender_mixamo.py); se manca, il segnaposto
+  // chr_base di MAREA con le 5 clip fatte da codice
+  eroe: { file: 'eroe_mixamo.glb', giro: 0, alto: 2.5, scatola: [0.8, 0.8, 2.5], animato: true },
+  eroe_chr: {
     file: 'eroe.glb', giro: 180, alto: 2.5, scatola: [0.8, 0.8, 2.5], animato: true,
-    tinte: { mat_pelle: '#f0a878', mat_capelli: '#4a2a1e', mat_vestito: '#f6efe2' }, nascondi: /^cappello_/,
+    tinte: { mat_pelle: '#f0a878', mat_capelli: '#8a5236', mat_vestito: '#f6efe2' }, nascondi: /^cappello_/,
   },
 };
 

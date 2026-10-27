@@ -253,14 +253,15 @@ function giraCamera() {
 function scatto() {
   if (modo !== 'fuori' || eroe.mossa) return;
   const dx = Math.sin(eroe.angolo), dz = Math.cos(eroe.angolo);
-  eroe.mossa = { tipo: 'scatto', t: 0, durata: 0.6, fermo: 0.07, dx, dz, scia: 0 };
+  eroe.mossa = { tipo: 'scatto', t: 0, durata: 0.8, fermo: 0.07, dx, dz, scia: 0 };
   effetti.polvere(eroe.x, quotaDi(eroe.x, eroe.z), eroe.z, dx, dz);
-  if (EROE3D && !suona('capriola', 0.05, 1, true)) suona('corre', 0.05, 1.6);
+  // la capriola di Mixamo (36 fotogrammi, scatto → capriola → scatto) stretta nella durata dello scatto
+  if (EROE3D && !suona('capriola', 0.05, 1.6, true)) suona('corre', 0.05, 1.6);
 }
 function bevi() {
   if (modo !== 'fuori' || eroe.mossa) return;
-  eroe.mossa = { tipo: 'bevi', t: 0, durata: 1.9, fatto: false };
-  if (EROE3D && !suona('bevi', 0.15, 1, true)) suona('fermo', 0.15);
+  eroe.mossa = { tipo: 'bevi', t: 0, durata: 2.2, fatto: false };
+  if (EROE3D && !suona('bevi', 0.15, 1.5, true)) suona('fermo', 0.15);
 }
 // la mossa in corso: true = il protagonista è occupato (niente passi dai comandi)
 function aggiornaMossa(dt, y) {
@@ -342,8 +343,8 @@ function aggiornaEroe(dt) {
   if (EROE3D) {
     if (!occupato) {
       if (eroe.fermo) suona('fermo', 0.2);
-      else if (corre) suona('corre', 0.15, 1.0 * eroe.forza);
-      else suona('cammina', 0.15, 1.15 * eroe.forza);
+      else if (corre) suona('corre', 0.15, 1.35 * eroe.forza);
+      else suona('cammina', 0.15, 1.6 * eroe.forza);
     }
     eroe.o.gira(eroe.angolo);
     eroe.o.sposta(eroe.x, y, eroe.z);
