@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Porto di Marea</title>
+  <style>
+    /* comandi sopra il mondo: cartellini crema col bordo nero spesso, come gli oggetti dello stile «nero 1» */
+    :root { --mare: #4e6880; --carta: #fbe9cf; --bordo: #15100e; --inchiostro: #2a1a12; color-scheme: light; }
+    html, body { margin: 0; height: 100%; background: var(--mare); color: var(--inchiostro); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+    canvas { position: fixed; inset: 0; display: block; width: 100vw; height: 100vh; }
+    #aiuto { position: fixed; z-index: 1; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); font: 600 13px/1.2 system-ui, sans-serif; background: var(--carta); border: 2.5px solid var(--bordo); border-radius: 12px; padding: 7px 11px; pointer-events: none; opacity: .92; }
+    #bAzione { position: fixed; z-index: 1; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); padding: 13px 20px 13px 46px; border: 3px solid var(--bordo); border-radius: 16px; background: var(--carta); color: var(--inchiostro); font: 700 17px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 3px 0 #15100e; }
+    #bAzione::before { content: 'A'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; background: #b8a43a; color: #fff; font: 800 14px/26px system-ui, sans-serif; text-align: center; border: 2px solid #15100e; box-sizing: border-box; }
+    #bAzione:active { transform: translateY(2px); box-shadow: 0 1px 0 #15100e; }
+    button:focus-visible { outline: 3px solid var(--inchiostro); outline-offset: 2px; }
+    #pad { position: fixed; z-index: 1; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; border: 3px solid rgba(255, 246, 228, .75); display: none; pointer-events: none; }
+    #pad i { position: absolute; left: 29px; top: 29px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 246, 228, .9); }
+    #velo { position: fixed; inset: 0; z-index: 2; background: #1c1412; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    #velo.su { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="aiuto">wasd o trascina · e per agire</div>
+  <button id="bAzione" style="display:none">entra</button>
+  <div id="pad"><i></i></div>
+  <div id="velo"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

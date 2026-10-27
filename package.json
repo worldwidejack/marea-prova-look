@@ -1,0 +1,14 @@
+{
+  "name": "marea-prova-look",
+  "private": true,
+  "type": "module",
+  "description": "Prova dei look di MAREA (27/10): il porto nero 1 in 3D, look inchiostro e pixel, personaggio 3D o sprite. Fuori dal repo di MAREA.",
+  "scripts": {
+    "dev": "vite --port 5480 --strictPort --host",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "three": "0.186.1",
+    "vite": "8.3.1"
+  }
+}
