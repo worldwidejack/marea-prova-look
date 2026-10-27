@@ -10,6 +10,9 @@ import { DESTRA, SU, VERSO_CAMERA } from './camera.js';
 import { FOSCHIA, GLSL_FOSCHIA } from './atmosfera.js';
 
 export const VP = { value: new THREE.Matrix4() }; // vista × proiezione, aggiornata a ogni fotogramma
+// sotto questa trasparenza il pixel del disegno si scarta: 0,04 in HD; nei look pixel 0,5 (il bordo sfumato, rimpicciolito,
+// diventerebbe un alone chiaro o magenta)
+export const SOGLIA = { value: 0.04 };
 
 const VERT = /* glsl */`
   varying vec2 vUv; varying vec3 vMondo;
@@ -20,7 +23,7 @@ const VERT = /* glsl */`
     gl_Position = projectionMatrix * viewMatrix * m;
   }`;
 const FRAG = /* glsl */`
-  uniform sampler2D map; uniform vec3 uMin, uMax, uMin2, uMax2; uniform mat4 uVP; uniform float uOpacita, uScatola, uAvanti; uniform vec3 uBase, uSu;
+  uniform sampler2D map; uniform vec3 uMin, uMax, uMin2, uMax2; uniform mat4 uVP; uniform float uOpacita, uScatola, uAvanti, uSoglia; uniform vec3 uBase, uSu;
   varying vec2 vUv; varying vec3 vMondo;
   ${GLSL_FOSCHIA}
   float entra(vec3 o, vec3 d, vec3 mn, vec3 mx) {
@@ -31,7 +34,7 @@ const FRAG = /* glsl */`
   }
   void main() {
     vec4 c = texture2D(map, vUv); // premoltiplicata: il filtro non pesca colori da sotto la trasparenza
-    if (c.a < 0.04) discard;
+    if (c.a < uSoglia) discard;
     c.rgb /= c.a;
     // sagoma verticale: salire di v sullo schermo = salire di v / cos 30° sopra la base, cioè 0,577·v più vicino alla camera
     vec3 p = vMondo + uVerso * (uAvanti + 0.577 * max(0.0, dot(vMondo - uBase, uSu)));
@@ -83,7 +86,7 @@ export function creaFabbrica(scena, { elenco, texture, alfa }, nebbia = true) {
       uniforms: {
         map: { value: texture[nome] }, uMin: { value: new THREE.Vector3() }, uMax: { value: new THREE.Vector3() },
         uMin2: { value: new THREE.Vector3() }, uMax2: { value: new THREE.Vector3() }, uScatola: { value: 0 }, uAvanti: { value: 0 }, uBase: { value: new THREE.Vector3() }, uSu: { value: SU },
-        uVP: VP, uOpacita: { value: 1 }, ...FOSCHIA, ...(nebbia ? {} : { uForza: { value: 0 } }),
+        uVP: VP, uOpacita: { value: 1 }, uSoglia: SOGLIA, ...FOSCHIA, ...(nebbia ? {} : { uForza: { value: 0 } }),
       },
       vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide, alphaToCoverage: true,
     });

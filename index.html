@@ -18,6 +18,8 @@
     #pad i { position: absolute; left: 29px; top: 29px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 246, 228, .9); }
     #velo { position: fixed; inset: 0; z-index: 2; background: #1c1412; opacity: 0; pointer-events: none; transition: opacity .25s; }
     #velo.su { opacity: 1; }
+    /* contatore della prova: fps, draw call, triangoli (piccolo, in basso a sinistra) */
+    #numeri { position: fixed; z-index: 1; left: max(10px, env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); font: 600 11px/1 ui-monospace, Menlo, monospace; color: #fbe9cf; background: rgba(21, 16, 14, .55); padding: 4px 7px; border-radius: 6px; pointer-events: none; }
   </style>
 </head>
 <body>
