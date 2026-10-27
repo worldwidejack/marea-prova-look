@@ -22,12 +22,14 @@
     #mosse { position: fixed; z-index: 1; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
     #mosse button { padding: 10px 13px; border: 3px solid var(--bordo); border-radius: 14px; background: var(--carta); color: var(--inchiostro); font: 700 14px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 3px 0 #15100e; }
     #mosse button:active { transform: translateY(2px); box-shadow: 0 1px 0 #15100e; }
+    #aiuto .dito { display: none; }
+    @media (pointer: coarse), (max-width: 700px) { #aiuto .pc { display: none; } #aiuto .dito { display: inline; } }
     /* contatore della prova: fps, draw call, triangoli (piccolo, in basso a sinistra) */
     #numeri { position: fixed; z-index: 1; left: max(10px, env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); font: 600 11px/1 ui-monospace, Menlo, monospace; color: #fbe9cf; background: rgba(21, 16, 14, .55); padding: 4px 7px; border-radius: 6px; pointer-events: none; }
   </style>
 </head>
 <body>
-  <div id="aiuto">wasd o trascina · shift corre · spazio scatto · q pozione · c camera · e per agire</div>
+  <div id="aiuto"><span class="pc">wasd · shift corre · spazio scatto · q pozione · c camera · e per agire</span><span class="dito">trascina per camminare (fino in fondo: corri)</span></div>
   <button id="bAzione" style="display:none">entra</button>
   <div id="mosse"><button id="bCamera" aria-label="gira la camera">⟲</button><button id="bPozione">pozione</button><button id="bScatto">scatto</button></div>
   <div id="pad"><i></i></div>

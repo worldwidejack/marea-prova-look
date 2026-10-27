@@ -243,11 +243,11 @@ function azione() {
   else if (a === 'esci') dissolvi(() => { modo = 'fuori'; const p = puntoLibero(PORTA_BAR.x + 0.6, PORTA_BAR.z); mettiEroe(p.x, p.z, 'SE', false); });
   else if (a === 'sali in barca') {
     modo = 'barca'; barca.sali(eroe); sagoma?.visibile(false); ombraEroe.visible = false;
-    if (EROE3D) suona('row', 0.15); else eroe.o.visibile(false);
+    if (EROE3D) suona('rema', 0.15); else eroe.o.visibile(false);
   } else if (a === 'scendi') {
     const p = puntoLibero(...Object.values(barca.scendi())); modo = 'fuori'; mettiEroe(p.x, p.z, 'S', false);
     eroe.o.visibile(true); ombraEroe.visible = true;
-    if (EROE3D) suona('idle', 0.15);
+    if (EROE3D) suona('fermo', 0.15);
   }
 }
 bottone.addEventListener('click', (e) => { e.stopPropagation(); azione(); });
@@ -484,6 +484,32 @@ window.prova = {
       schermo: [renderer.domElement.width, renderer.domElement.height], pxUnita: +pu.toFixed(1), pixel: pixel?.p() ?? 1,
       eroe: figura(eroe.o), pescatore: figura(abitanti[0]?.o),
     };
+  },
+  // il copione del video (prova dei look): stessi comandi, stessi tempi in ogni look. passi = [[secondi, cosa], …]
+  // cosa: 'tasti:ds' (tasti tenuti), 'scatto', 'bevi', 'azione', 'camera', 'mollo'. Ogni fotogramma (30 al secondo) va
+  // al server come JPEG in concept/foto/<cartella>/f0001.jpg
+  async copione(passi, durata = 30, cartella = 'video', qualita = 0.9, ogni = 1) {
+    let i = 0, n = Math.round(durata * 30);
+    for (let f = 0; f < n; f++) {
+      const t = f / 30;
+      while (i < passi.length && passi[i][0] <= t) {
+        const c = passi[i][1];
+        if (c.startsWith('tasti:')) { tasti.clear(); for (const k of c.slice(6)) tasti.add(k === '^' ? 'shift' : k); }
+        else if (c === 'mollo') tasti.clear();
+        else if (c === 'scatto') scatto();
+        else if (c === 'bevi') bevi();
+        else if (c === 'azione') azione();
+        else if (c === 'camera') giraCamera();
+        i++;
+      }
+      passo(1 / 30);
+      disegna();
+      if (f % ogni) continue;
+      const nome = `${cartella}/f${String(f + 1).padStart(4, '0')}`;
+      await fetch('/__foto?nome=' + nome + '&jpg=1', { method: 'POST', body: renderer.domElement.toDataURL('image/jpeg', qualita) });
+    }
+    tasti.clear();
+    return n;
   },
   // foto: un passo fermo, disegno e scatto subito (funziona anche con la scheda in secondo piano)
   async foto(nome, passi = 1) {

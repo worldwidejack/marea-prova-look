@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 
 const AZ = Math.PI / 4, EL = Math.PI / 6;
+// ?zoom=1.6: inquadratura più stretta (per il video della prova); di serie quella del gioco
+const ZOOM = Math.min(3, Math.max(0.5, +(new URLSearchParams(location.search).get('zoom') ?? 1) || 1));
 export const VERSO_CAMERA = new THREE.Vector3();
 export const DESTRA = new THREE.Vector3();
 export const SU = new THREE.Vector3();
@@ -28,7 +30,7 @@ export function creaCamera() {
   function misura(w, h) {
     // px per unità: 0,056 × altezza (1080p → 60: il personaggio col cappello è il 13,4% dello schermo, come nel riferimento)
     // ma mai meno di 15 unità in larghezza (telefono in verticale)
-    pxUnita = Math.min(h * 0.056, w / 15);
+    pxUnita = Math.min(h * 0.056, w / 15) * ZOOM;
     cam.left = -w / 2 / pxUnita; cam.right = w / 2 / pxUnita;
     cam.top = h / 2 / pxUnita; cam.bottom = -h / 2 / pxUnita;
     cam.updateProjectionMatrix();
