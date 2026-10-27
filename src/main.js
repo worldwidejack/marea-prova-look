@@ -277,7 +277,7 @@ function scatto() {
 }
 function bevi() {
   if (modo !== 'fuori' || eroe.mossa) return;
-  eroe.mossa = { tipo: 'bevi', t: 0, durata: 2.2, fatto: false };
+  eroe.mossa = { tipo: 'bevi', t: 0, durata: 2.6, fatto: false };
   if (EROE3D && !suona('bevi', 0.15, 1.5, true)) suona('fermo', 0.15);
 }
 // la mossa in corso: true = il protagonista è occupato (niente passi dai comandi)
@@ -312,7 +312,8 @@ function aggiornaMossa(dt, y) {
     return true;
   }
   if (m.tipo === 'bevi') {
-    if (!m.fatto && m.t > 0.95) { m.fatto = true; effetti.effettoPozione(eroe.x, y, eroe.z); }
+    // l'effetto parte quando la bottiglia arriva alla bocca (Mixamo a 1,5×: ~1,5 s; disegni a pixel: il 3° disegno)
+    if (!m.fatto && m.t > 1.5) { m.fatto = true; effetti.effettoPozione(eroe.x, y, eroe.z); }
     if (k >= 1) eroe.mossa = null;
     return true;
   }

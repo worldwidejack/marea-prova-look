@@ -1,0 +1,15 @@
+{
+ "pozione-v1": {
+  "nota": "Effetto pozione MAREA (prova dei look), foglio B di Codex tagliato in 12: tempi sui 2, picco e coda tenuti 3",
+  "chi": "Claude",
+  "quando": "2026-10-28T00:48:34+01:00",
+  "strumento": "scrivi_animazione"
+ },
+ "pozione-v2": {
+  "nota": "Pulizia: ogni disegno ricentrato in orizzontale sullo stesso asse (l'effetto ballava di ±13 px a destra e sinistra); la salita resta",
+  "madre": "pozione-v1",
+  "chi": "Claude",
+  "quando": "2026-10-28T00:49:05+01:00",
+  "strumento": "ritocca"
+ }
+}

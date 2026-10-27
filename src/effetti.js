@@ -102,14 +102,18 @@ export function creaEffetti(scena) {
     try {
       const info = await (await fetch('./effetti/pozione/info.json')).json();
       const car = new THREE.TextureLoader();
-      const fot = await Promise.all(info.fotogrammi.map((f) => car.loadAsync('./effetti/pozione/' + f)));
-      fot.forEach((t) => { t.colorSpace = THREE.NoColorSpace; });
-      pozione = { info, fot };
+      // i fotogrammi ripetono i disegni (tempi sui 2 e sui 3): ogni disegno si carica una volta
+      const unici = [...new Set(info.fotogrammi)];
+      const tex = new Map(await Promise.all(unici.map(async (f) => [f, await car.loadAsync('./effetti/pozione/' + f)])));
+      for (const t of tex.values()) t.colorSpace = THREE.NoColorSpace;
+      pozione = { info, fot: info.fotogrammi.map((f) => tex.get(f)) };
     } catch { /* niente animazione disegnata: restano le scintille provvisorie */ }
   })();
   function effettoPozione(x, y, z) {
     if (!pozione) { scintille(x, y + 1.2, z); return; }
     const s = sprite(pozione.fot[0]);
+    // l'anello gira attorno a lui: si disegna sopra a tutto (il centro del disegno è vuoto, lui si vede)
+    s.material.depthTest = false; s.renderOrder = 6;
     const { info } = pozione;
     vivi.push({ s, t: 0, durata: pozione.fot.length / (info.fps ?? 12), anim: pozione.fot, fps: info.fps ?? 12, fisso: [x, y + (info.alto ?? 1.4), z], scala: info.scala ?? 3, cresce: 0 });
   }

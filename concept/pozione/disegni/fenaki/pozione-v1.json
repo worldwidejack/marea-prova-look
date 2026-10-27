@@ -1,0 +1,81 @@
+{
+ "fps": 24,
+ "tela": {
+  "w": 362,
+  "h": 362
+ },
+ "celle": [
+  {
+   "disegno": "p01",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p02",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p03",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p04",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p05",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p06",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p07",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p08",
+   "durata": 3,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p09",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p10",
+   "durata": 2,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p11",
+   "durata": 3,
+   "x": 181,
+   "y": 181
+  },
+  {
+   "disegno": "p12",
+   "durata": 3,
+   "x": 181,
+   "y": 181
+  }
+ ]
+}
