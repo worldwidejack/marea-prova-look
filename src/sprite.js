@@ -81,6 +81,7 @@ function alfaDi(texture) {
 
 // nebbia = false dentro il bar (la foschia è del fuori)
 export function creaFabbrica(scena, { elenco, texture, alfa }, nebbia = true) {
+  const creati = [];
   function materiale(nome) {
     return new THREE.ShaderMaterial({
       uniforms: {
@@ -141,7 +142,13 @@ export function creaFabbrica(scena, { elenco, texture, alfa }, nebbia = true) {
       return m.a[Math.floor(v * m.h) * m.w + Math.floor(u * m.w)] > 120;
     };
     o.aggiorna();
+    creati.push(o);
     return o;
   }
-  return { crea, ha: (n) => !!elenco[n] };
+  // la camera ha girato (prova dei look): i disegni si rigirano verso di lei
+  function riorienta() {
+    orient.setFromRotationMatrix(new THREE.Matrix4().makeBasis(DESTRA, SU, VERSO_CAMERA));
+    for (const o of creati) { o.mesh.quaternion.copy(orient); o.aggiorna(); }
+  }
+  return { crea, ha: (n) => !!elenco[n], riorienta };
 }

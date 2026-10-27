@@ -1,3 +1,5 @@
 node_modules
 dist
 concept/foto/
+concept/3d/mixamo/*/texture_*.png
+concept/3d/posa_a/log/

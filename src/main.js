@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { creaGriglia, altezza, percorribile, LEGNO, SCALE, QUOTA_LEGNO, LATO } from './mappa.js';
 import { creaTerreno } from './terreno.js';
-import { creaCamera, VERSO_CAMERA } from './camera.js';
+import { creaCamera, VERSO_CAMERA, DESTRA, GIU_TERRA } from './camera.js';
 import { caricaSprite, creaFabbrica, VP, SOGLIA } from './sprite.js';
 import { creaMare } from './acqua.js';
 import { FOSCHIA, CIELO } from './atmosfera.js';
@@ -18,6 +18,7 @@ import { caricaModelli, creaFabbricaModelli } from './modelli.js';
 import { SPESSORE, sagomaDietro } from './inchiostro.js';
 import { creaPixel } from './pixel.js';
 import { creaNumeri } from './numeri.js';
+import { creaEffetti } from './effetti.js';
 
 THREE.ColorManagement.enabled = false; // i colori dei disegni passano così come sono
 
@@ -41,6 +42,7 @@ const g = creaGriglia();
 const [sprite, pronti] = await Promise.all([caricaSprite(), LOOK === 'disegni' ? {} : caricaModelli()]);
 const fab = creaFabbrica(scena, sprite);
 const fab3 = creaFabbricaModelli(scena, pronti);
+const effetti = creaEffetti(scena);
 // gli edifici e la barca in 3D appena c'è il modello; le persone in 3D solo nei look col personaggio 3D
 const PERSONE = /^(pescatore|barista|eroe)/;
 const in3d = (nome) => fab3.ha(nome) && !(LOOK === 'sprite' && PERSONE.test(nome));
@@ -116,18 +118,24 @@ ombraEroe.scale.set(1.15, 1, 0.75);
 scena.add(ombraEroe);
 const PASSI = ['S', 'SE', 'E', 'NE', 'N'].every((d) => sprite.elenco[`eroe_${d}_4`]);
 
-// le clip del protagonista 3D: si passa dall'una all'altra in dissolvenza
-function suona(nome, dissolvi = 0.2, velocita = 1) {
-  const o = eroe.o;
-  if (!o.clip?.[nome]) return;
+// le clip del protagonista 3D (nomi di Mixamo, poi quelli del segnaposto chr_base): si passa dall'una all'altra in dissolvenza
+const NOMI_CLIP = {
+  fermo: ['fermo', 'idle'], cammina: ['camminata', 'walk'], corre: ['corsa', 'run'], capriola: ['capriola'], bevi: ['bevi'], rema: ['rema', 'row'],
+};
+const clipDi = (k) => NOMI_CLIP[k]?.find((n) => eroe.o.clip?.[n]) ?? null;
+function suona(chiave, dissolvi = 0.2, velocita = 1, unaVolta = false) {
+  const o = eroe.o, nome = clipDi(chiave);
+  if (!nome) return false;
   const a = o.clip[nome];
+  a.setLoop(unaVolta ? THREE.LoopOnce : THREE.LoopRepeat); a.clampWhenFinished = unaVolta;
   a.timeScale = velocita;
   if (eroe.clip === nome) return;
   a.reset().play();
   if (eroe.clip && o.clip[eroe.clip]) o.clip[eroe.clip].crossFadeTo(a, dissolvi, false);
   eroe.clip = nome;
+  return true;
 }
-if (EROE3D) suona('idle', 0);
+if (EROE3D) { suona('fermo', 0); effetti.preparaSagome(eroe.o.base); }
 
 function libero(x, z, daY, senzaOggetti = false) {
   if (!percorribile(g, x, z)) return false;
@@ -147,7 +155,14 @@ function puntoLibero(x, z) {
 
 // ---------- comandi: tastiera, trascinamento, bottone ----------
 const tasti = new Set();
-addEventListener('keydown', (e) => { tasti.add(e.key.toLowerCase()); if ((e.key === 'e' || e.key === ' ' || e.key === 'Enter') && !e.repeat) azione(); });
+addEventListener('keydown', (e) => {
+  tasti.add(e.key.toLowerCase());
+  if (e.repeat) return;
+  if (e.key === 'e' || e.key === 'Enter') azione();
+  else if (e.key === ' ') scatto();
+  else if (e.key.toLowerCase() === 'q') bevi();
+  else if (e.key.toLowerCase() === 'c') giraCamera();
+});
 addEventListener('keyup', (e) => tasti.delete(e.key.toLowerCase()));
 addEventListener('blur', () => tasti.clear());
 const pad = document.getElementById('pad'), pomello = pad.querySelector('i');
@@ -220,6 +235,71 @@ function azione() {
 }
 bottone.addEventListener('click', (e) => { e.stopPropagation(); azione(); });
 bottone.addEventListener('pointerdown', (e) => e.stopPropagation());
+for (const [id, fn] of [['bScatto', () => scatto()], ['bPozione', () => bevi()], ['bCamera', () => giraCamera()]]) {
+  const b = document.getElementById(id);
+  b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+  b.addEventListener('pointerdown', (e) => e.stopPropagation());
+}
+// la camera gira solo dove tutto è 3D (gli sprite del protagonista sono disegnati per un angolo solo)
+const GIRA = EROE3D;
+if (!GIRA) document.getElementById('bCamera').style.display = 'none';
+function giraCamera() {
+  if (!GIRA) return;
+  const v = camera.voluto();
+  camera.orbita(v === 0 ? 0.52 : v > 0 ? -0.52 : 0);
+}
+
+// ---------- mosse: scatto con capriola, pozione ----------
+function scatto() {
+  if (modo !== 'fuori' || eroe.mossa) return;
+  const dx = Math.sin(eroe.angolo), dz = Math.cos(eroe.angolo);
+  eroe.mossa = { tipo: 'scatto', t: 0, durata: 0.6, fermo: 0.07, dx, dz, scia: 0 };
+  effetti.polvere(eroe.x, quotaDi(eroe.x, eroe.z), eroe.z, dx, dz);
+  if (EROE3D && !suona('capriola', 0.05, 1, true)) suona('corre', 0.05, 1.6);
+}
+function bevi() {
+  if (modo !== 'fuori' || eroe.mossa) return;
+  eroe.mossa = { tipo: 'bevi', t: 0, durata: 1.9, fatto: false };
+  if (EROE3D && !suona('bevi', 0.15, 1, true)) suona('fermo', 0.15);
+}
+// la mossa in corso: true = il protagonista è occupato (niente passi dai comandi)
+function aggiornaMossa(dt, y) {
+  const m = eroe.mossa;
+  if (!m) return false;
+  m.t += dt;
+  const k = Math.min(1, m.t / m.durata);
+  const s = eroe.o.interno ?? null;
+  if (m.tipo === 'scatto') {
+    if (m.t < m.fermo) {
+      // fermo-immagine: un attimo schiacciato prima della spinta
+      if (s) s.scale.set(1.12, 0.8, 1.12);
+      return true;
+    }
+    const kk = Math.min(1, (m.t - m.fermo) / (m.durata - m.fermo));
+    const v = (13 * Math.pow(1 - kk, 1.6) + 1.5) * dt;
+    if (libero(eroe.x + m.dx * v, eroe.z + m.dz * v, y)) { eroe.x += m.dx * v; eroe.z += m.dz * v; }
+    if (s) {
+      // allungato nella spinta, poi torna; capriola da codice se non c'è la clip di Mixamo
+      const st = 1 + 0.18 * Math.max(0, 1 - kk * 3);
+      s.scale.set(1 / Math.sqrt(st), st, 1 / Math.sqrt(st));
+      if (!clipDi('capriola')) eroe.o.perno.rotation.x = Math.PI * 2 * (kk < 0.08 ? 0 : Math.min(1, (kk - 0.08) / 0.72) ** 0.8);
+    }
+    if ((m.scia -= dt) <= 0 && kk < 0.75) { if (EROE3D) effetti.sagoma(eroe.o.mesh, eroe.o.base); m.scia = 0.045; }
+    if (k >= 1) {
+      if (s) s.scale.set(1, 1, 1);
+      if (EROE3D) eroe.o.perno.rotation.x = 0;
+      effetti.polvere(eroe.x, y, eroe.z, 0, 0);
+      eroe.mossa = null;
+    }
+    return true;
+  }
+  if (m.tipo === 'bevi') {
+    if (!m.fatto && m.t > 0.95) { m.fatto = true; effetti.effettoPozione(eroe.x, y, eroe.z); }
+    if (k >= 1) eroe.mossa = null;
+    return true;
+  }
+  return false;
+}
 
 function mettiEroe(x, z, dir, specchio) {
   eroe.x = x; eroe.z = z; eroe.dir = dir; eroe.specchio = specchio;
@@ -229,14 +309,18 @@ function mettiEroe(x, z, dir, specchio) {
 
 // ---------- ciclo ----------
 const VEL = 4.2;
+const VEL_CORSA = 7.4;
 function aggiornaEroe(dt) {
-  const inp = ingresso();
+  const occupato = aggiornaMossa(dt, quotaDi(eroe.x, eroe.z));
+  const inp = occupato ? null : ingresso();
+  // corsa: shift, o il dito tirato fino in fondo
+  const corre = !!inp && (tasti.has('shift') || (tocco && Math.hypot(tocco.dx, tocco.dy) > 0.97));
   if (inp) {
-    // destra schermo = (+x, -z), giù schermo = (+x, +z): stessa velocità nel mondo in ogni direzione
-    let wx = (inp.dx + inp.dy) * Math.SQRT1_2, wz = (inp.dy - inp.dx) * Math.SQRT1_2;
+    // destra e giù dello schermo portate a terra (con la camera girata girano anche i comandi)
+    let wx = inp.dx * DESTRA.x + inp.dy * GIU_TERRA.x, wz = inp.dx * DESTRA.z + inp.dy * GIU_TERRA.z;
     const l = Math.hypot(wx, wz); wx /= l; wz /= l;
     const forza = Math.min(1, Math.hypot(inp.dx, inp.dy) * 1.2);
-    const v = VEL * forza * dt;
+    const v = (corre ? VEL_CORSA : VEL) * forza * dt;
     const y0 = quotaDi(eroe.x, eroe.z);
     const incastrato = !libero(eroe.x, eroe.z, y0);
     const prove = [[wx, wz], [wx, 0], [0, wz]];
@@ -256,7 +340,11 @@ function aggiornaEroe(dt) {
   } else { eroe.fermo = true; eroe.passo = 0; }
   const y = quotaDi(eroe.x, eroe.z);
   if (EROE3D) {
-    if (eroe.fermo) suona('idle', 0.2); else suona('walk', 0.15, 1.15 * eroe.forza);
+    if (!occupato) {
+      if (eroe.fermo) suona('fermo', 0.2);
+      else if (corre) suona('corre', 0.15, 1.0 * eroe.forza);
+      else suona('cammina', 0.15, 1.15 * eroe.forza);
+    }
     eroe.o.gira(eroe.angolo);
     eroe.o.sposta(eroe.x, y, eroe.z);
     eroe.o.mixer.update(dt);
@@ -297,6 +385,8 @@ ridimensiona();
 
 function passo(dt) {
   tempo += dt;
+  if (camera.passo(dt)) fab.riorienta();
+  effetti.passo(dt);
   for (const a of abitanti) {
     if (a.o.dati.modo === '3d') a.o.interno.scale.y = 1 + Math.sin(tempo * 2.1 + a.fase) * 0.012; // respira
     else a.o.disegno(Math.floor(tempo / 1.1 + a.fase) % 2 && fab.ha(a.nome + '_2') ? a.nome + '_2' : a.nome);
@@ -333,7 +423,7 @@ requestAnimationFrame(fotogramma);
 
 // per le prove: teletrasporto, foto e numeri
 window.prova = {
-  look: LOOK, mettiEroe, eroe, lato: LATO, libero, quotaDi, mondo, numeri: () => numeri.leggi(),
+  look: LOOK, mettiEroe, eroe, lato: LATO, libero, quotaDi, mondo, numeri: () => numeri.leggi(), scatto, bevi, giraCamera, tasti, camera,
   entra: () => { if (interno) { modo = 'dentro'; interno.entra(); } },
   sali: () => { if (barca.puoSalire(eroe)) azione(); },
   esci: () => { if (modo === 'dentro') azione(); },

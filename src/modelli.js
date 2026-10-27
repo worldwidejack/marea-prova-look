@@ -67,11 +67,15 @@ export function creaFabbricaModelli(scena, pronti, { nebbia = true } = {}) {
     interno.add(base);
     const m = misura(base, c);
     inchiostra(base, { tinte: c.tinte, nebbia });
+    // perno a metà altezza: le capriole girano attorno alla pancia, non ai piedi
+    const perno = new THREE.Group();
+    perno.position.y = m.alto * 0.45; interno.position.y = -m.alto * 0.45;
+    perno.add(interno);
     const gruppo = new THREE.Group();
-    gruppo.add(interno);
+    gruppo.add(perno);
     scena.add(gruppo);
     const dati = { scatola: c.scatola ?? [m.piede[0], m.piede[1], m.alto], piede: c.piede ?? m.piede, alto: m.alto, modo: '3d' };
-    const o = { nome, mesh: gruppo, interno, x, y, z, specchio: !!opz.specchio, dati, giro: 0 };
+    const o = { nome, mesh: gruppo, perno, interno, base, x, y, z, specchio: !!opz.specchio, dati, giro: 0 };
     const materiali = [];
     gruppo.traverse((q) => { if (q.isMesh) materiali.push(q.material); });
     // clip: un mixer per modello animato

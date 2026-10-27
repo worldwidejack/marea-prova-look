@@ -1,12 +1,24 @@
 // Camera isometrica 2:1 come nel riferimento: ortografica, girata di 45°, alzata di 30°.
 // Lo zoom tiene il personaggio al 13,4% dell'altezza dello schermo su PC; sul telefono in verticale si allarga
 // quanto basta per vedere almeno 15 unità in larghezza.
+// Prova dei look (28/10): nelle versioni 3D un tasto la gira di ±30° attorno alla verticale (orbita): i tre versi
+// (VERSO_CAMERA, DESTRA, SU) cambiano sul posto, così chi li usa nei materiali li vede aggiornati senza fare niente.
 import * as THREE from 'three';
 
 const AZ = Math.PI / 4, EL = Math.PI / 6;
-export const VERSO_CAMERA = new THREE.Vector3(Math.cos(EL) * Math.sin(AZ), Math.sin(EL), Math.cos(EL) * Math.cos(AZ));
-export const DESTRA = new THREE.Vector3(Math.SQRT1_2, 0, -Math.SQRT1_2);
-export const SU = new THREE.Vector3().crossVectors(VERSO_CAMERA, DESTRA).normalize();
+export const VERSO_CAMERA = new THREE.Vector3();
+export const DESTRA = new THREE.Vector3();
+export const SU = new THREE.Vector3();
+// giù sullo schermo, a terra (serve ai comandi: tirare giù = andare verso la camera)
+export const GIU_TERRA = new THREE.Vector3();
+
+export function orienta(az = AZ) {
+  VERSO_CAMERA.set(Math.cos(EL) * Math.sin(az), Math.sin(EL), Math.cos(EL) * Math.cos(az));
+  DESTRA.set(Math.cos(az), 0, -Math.sin(az));
+  SU.crossVectors(VERSO_CAMERA, DESTRA).normalize();
+  GIU_TERRA.set(Math.sin(az), 0, Math.cos(az));
+}
+orienta();
 
 export function creaCamera() {
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
@@ -27,5 +39,14 @@ export function creaCamera() {
     cam.lookAt(bersaglio);
     cam.updateMatrixWorld();
   }
-  return { cam, misura, guarda, bersaglio, pxUnita: () => pxUnita };
+  // orbita: scarto dall'angolo di partenza (radianti); va piano verso quello voluto. passo() dice se si è mossa
+  let scarto = 0, voluto = 0;
+  function passo(dt) {
+    if (scarto === voluto) return false;
+    scarto += (voluto - scarto) * Math.min(1, dt * 5);
+    if (Math.abs(voluto - scarto) < 1e-3) scarto = voluto;
+    orienta(AZ + scarto);
+    return true;
+  }
+  return { cam, misura, guarda, bersaglio, pxUnita: () => pxUnita, orbita: (v) => { voluto = v; }, passo, voluto: () => voluto };
 }
