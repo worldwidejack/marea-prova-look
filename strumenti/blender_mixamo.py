@@ -19,6 +19,9 @@ argv = sys.argv[sys.argv.index('--') + 1:]
 CARTELLA, OUT = argv[0], argv[1]
 MATERIALE = argv[argv.index('--materiale') + 1] if '--materiale' in argv else None
 ALTO = float(argv[argv.index('--alto') + 1]) if '--alto' in argv else 2.5
+# --taglia fermo:1-150,bevi:1-130 (fotogrammi da tenere); --passo 2 = un campione ogni 2 fotogrammi nel glb
+TAGLIA = dict((k, tuple(int(n) for n in v.split('-'))) for k, v in (t.split(':') for t in argv[argv.index('--taglia') + 1].split(','))) if '--taglia' in argv else {}
+PASSO = int(argv[argv.index('--passo') + 1]) if '--passo' in argv else 1
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=os.path.join(CARTELLA, 'personaggio.fbx'), automatic_bone_orientation=False)
@@ -66,6 +69,16 @@ for az in clip:
                 k.co[1] = v0; k.handle_left[1] = v0; k.handle_right[1] = v0
     print('CLIP', az.name, [round(x) for x in az.frame_range])
 
+# clip lunghe accorciate (il fermo di Mixamo dura 10 s, la bevuta 9: ne basta un pezzo)
+for az in clip:
+    if az.name in TAGLIA:
+        a0, a1 = TAGLIA[az.name]
+        for fc in curve(az):
+            for k in [k for k in fc.keyframe_points if k.co[0] < a0 or k.co[0] > a1][::-1]:
+                fc.keyframe_points.remove(k)
+        az.frame_range = (a0, a1)
+        print('TAGLIATA', az.name, a0, a1)
+
 # ogni clip su una traccia NLA dello scheletro: l'esportatore glTF le esporta tutte, una per nome
 scheletro.animation_data_create()
 for az in clip:
@@ -101,10 +114,11 @@ pts = [o.matrix_world @ v.co for o in corpi for v in o.data.vertices]
 scheletro.location.z -= min(p.z for p in pts)
 for o in corpi:
     for p in o.data.polygons:
-        p.use_smooth = False
+        p.use_smooth = True  # normali morbide: vertici non sdoppiati (peso ÷5) e bande di luce tonde
 
 bpy.ops.export_scene.gltf(
     filepath=OUT, export_format='GLB', export_yup=True, export_apply=False, export_animations=True,
     export_animation_mode='NLA_TRACKS', export_image_format='WEBP', export_skins=True, export_def_bones=True,
+    export_frame_step=PASSO, export_optimize_animation_size=True,
 )
 print('SCRITTO', OUT, 'clip', [a.name for a in clip])

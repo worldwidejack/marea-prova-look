@@ -1,7 +1,7 @@
 {
-  "sottotitolo": "Stessa scala (lui alto uguale ovunque), stesso punto del porto. Bozza: edifici 3D ancora segnaposto, in attesa dei modelli Hunyuan.",
-  "disegni": {"righe": ["~125 disegni (Codex), protagonista 25", "una sera (26/10)", "0 crediti", "ogni mossa nuova: ~5 disegni per vista"]},
-  "inchiostro": {"righe": ["7 modelli Hunyuan: 98 crediti (stima)", "mosse Mixamo: 6, gratis", "pozione: 12 disegni (Fenaki)", "motore: ~1 ora"]},
-  "pixel": {"righe": ["gli stessi modelli e mosse", "+ 0 disegni, + 0 crediti", "è un modo di disegnare la scena"]},
-  "sprite": {"righe": ["protagonista: 36 disegni (3 fogli Codex)", "~20 minuti", "ogni mossa nuova: 12 disegni", "per ogni personaggio"]}
+  "sottotitolo": "Stesso porto, stesso punto, lui alto uguale ovunque. 3D: bar, capanno e bancarella SAM 3, barca e protagonista F3 Hunyuan, mosse Mixamo; abitanti 3D = F3 ricolorato.",
+  "disegni": {"righe": ["~125 disegni (Codex), protagonista 25", "una sera di lavoro (26/10), 0 crediti", "ogni mossa nuova: ~5 disegni per vista", "la camera non può girare"]},
+  "inchiostro": {"righe": ["5 modelli 3D: 45 crediti (1 bar Hunyuan buttato)", "6 mosse Mixamo, gratis; pozione 12 disegni", "~1 ora e mezza (motore, modelli, scheletro)", "personaggio nuovo: 1 disegno + 1-14 crediti"]},
+  "pixel": {"righe": ["gli stessi modelli e le stesse mosse", "+ 0 disegni, + 0 crediti, ~10 minuti", "è un altro modo di disegnare la stessa scena", "la camera gira (tasto C), come nell'inchiostro"]},
+  "sprite": {"righe": ["protagonista: 36 disegni (3 fogli Codex), ~15 min", "ogni mossa nuova: 12 disegni per personaggio", "in barca, seduto, vestiti: altri disegni", "la camera non può girare"]}
 }

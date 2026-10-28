@@ -78,8 +78,9 @@ for (const [nome, x, z, opz = {}] of OGGETTI) {
 spargi(g, fab, solidi, mondo, quotaDi);
 // abitanti: due disegni che si alternano piano (sprite) o il modello che respira (3D)
 const abitanti = [];
-const DOVE_ABITANTI = [['pescatore', 44.6, 26.2, -2.4]];
-if (LOOK !== 'disegni') DOVE_ABITANTI.push(['barista', 33.4, 16.9, -0.2]);
+// il pescatore 3D sta seduto sul bordo del molo con le gambe di fuori (verso +x); quello disegnato sulla sua cassetta
+const DOVE_ABITANTI = [in3d('pescatore') ? ['pescatore', 44.72, 26.2, Math.PI / 2] : ['pescatore', 44.6, 26.2, 0]];
+if (LOOK !== 'disegni') DOVE_ABITANTI.push(['barista', 33.4, 16.9, 0.6]);
 for (const [nome, x, z, giro] of DOVE_ABITANTI) {
   const o = crea(nome, x, quotaDi(x, z), z);
   if (!o) continue;
@@ -243,7 +244,8 @@ function azione() {
   else if (a === 'esci') dissolvi(() => { modo = 'fuori'; const p = puntoLibero(PORTA_BAR.x + 0.6, PORTA_BAR.z); mettiEroe(p.x, p.z, 'SE', false); });
   else if (a === 'sali in barca') {
     modo = 'barca'; barca.sali(eroe); sagoma?.visibile(false); ombraEroe.visible = false;
-    if (EROE3D) suona('rema', 0.15); else eroe.o.visibile(false);
+    // a sprite (look sprite) lui resta in barca col disegno in piedi: per remare servirebbero disegni nuovi
+    if (EROE3D) suona('rema', 0.15); else if (!fabPx) eroe.o.visibile(false);
   } else if (a === 'scendi') {
     const p = puntoLibero(...Object.values(barca.scendi())); modo = 'fuori'; mettiEroe(p.x, p.z, 'S', false);
     eroe.o.visibile(true); ombraEroe.visible = true;
@@ -414,12 +416,12 @@ function ridimensiona() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h);
   camera.misura(w, h);
-  // contorno: ~2,4 px sullo schermo nel look inchiostro, un pixel (poco meno) nel look pixel
+  // contorno: ~3 px sullo schermo nel look inchiostro (come i disegni), un pixel (poco meno) nel look pixel
   if (pixel) {
     pixel.misura(camera.cam, w, h, camera.pxUnita()); SPESSORE.value = pixel.unita() * 0.85;
     if (spritePx) { for (const d of Object.values(spritePx.elenco)) d.s = 1 / pixel.unita(); eroe.o?.aggiorna(); }
   }
-  else SPESSORE.value = 2.4 / camera.pxUnita();
+  else SPESSORE.value = 3.1 / camera.pxUnita();
   interno?.misura(w, h);
 }
 addEventListener('resize', ridimensiona);
@@ -431,11 +433,22 @@ function passo(dt) {
   effetti.passo(dt);
   passoScie(dt);
   for (const a of abitanti) {
-    if (a.o.dati.modo === '3d') a.o.interno.scale.y = 1 + Math.sin(tempo * 2.1 + a.fase) * 0.012; // respira
+    if (a.o.mixer) a.o.mixer.update(dt);
+    else if (a.o.dati.modo === '3d') a.o.interno.scale.y = 1 + Math.sin(tempo * 2.1 + a.fase) * 0.012; // respira
     else a.o.disegno(Math.floor(tempo / 1.1 + a.fase) % 2 && fab.ha(a.nome + '_2') ? a.nome + '_2' : a.nome);
   }
   if (modo === 'fuori') aggiornaEroe(dt);
-  else if (modo === 'barca') { barca.aggiorna(dt, ingresso()); if (EROE3D) eroe.o.mixer.update(dt); }
+  else if (modo === 'barca') {
+    const inp = ingresso();
+    barca.aggiorna(dt, inp);
+    if (EROE3D) eroe.o.mixer.update(dt);
+    else if (fabPx) {
+      if (inp) { const d = direzione(inp.dx, inp.dy); eroe.dir = d.vista; eroe.specchio = d.specchio; }
+      eroe.fermo = true; eroe.mossa = null;
+      const b = barca.posizione(), q = pixel.agganciaPunto(b.x, 0.05, b.z);
+      eroe.o.disegno(fotogrammaEroe(), eroe.specchio); eroe.o.sposta(q.x, q.y, q.z);
+    }
+  }
   else interno.aggiorna(dt, ingresso());
   const a = azioneDisponibile();
   bottone.style.display = a ? 'block' : 'none';
@@ -456,10 +469,15 @@ function disegna() {
   barca.passo(tempo);
   if (pixel) pixel.disegna(scena, camera.cam); else renderer.render(scena, camera.cam);
 }
+// in regia (copione del video) il tempo lo conta solo il copione: il ciclo dello schermo non fa passi
+let inRegia = false;
 function fotogramma(t) {
-  passo(Math.min(0.05, (t - t0) / 1000)); t0 = t;
-  disegna();
-  numeri.conta();
+  if (!inRegia) {
+    passo(Math.min(0.05, (t - t0) / 1000));
+    disegna();
+    numeri.conta();
+  }
+  t0 = t;
   requestAnimationFrame(fotogramma);
 }
 requestAnimationFrame(fotogramma);
@@ -490,6 +508,7 @@ window.prova = {
   // al server come JPEG in concept/foto/<cartella>/f0001.jpg
   async copione(passi, durata = 30, cartella = 'video', qualita = 0.9, ogni = 1) {
     let i = 0, n = Math.round(durata * 30);
+    inRegia = true;
     for (let f = 0; f < n; f++) {
       const t = f / 30;
       while (i < passi.length && passi[i][0] <= t) {
@@ -509,6 +528,7 @@ window.prova = {
       await fetch('/__foto?nome=' + nome + '&jpg=1', { method: 'POST', body: renderer.domElement.toDataURL('image/jpeg', qualita) });
     }
     tasti.clear();
+    inRegia = false;
     return n;
   },
   // foto: un passo fermo, disegno e scatto subito (funziona anche con la scheda in secondo piano)

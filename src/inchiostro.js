@@ -11,6 +11,9 @@ import { OMBRA_DIR } from './terreno.js';
 const hOmbra = Math.hypot(OMBRA_DIR.x, OMBRA_DIR.z);
 export const SOLE = new THREE.Vector3(-OMBRA_DIR.x / hOmbra, 0.8, -OMBRA_DIR.z / hOmbra).normalize();
 
+// i personaggi hanno la luce un po' più davanti (dalla camera, a destra in alto): la faccia si legge anche col sole basso
+import { VERSO_CAMERA as VC } from './camera.js';
+export const SOLE_PERSONAGGI = SOLE.clone().add(VC.clone().multiplyScalar(0.9)).normalize();
 export const TONI = {
   uSole: { value: SOLE },
   uLuce: { value: new THREE.Vector3(1.03, 1.0, 0.96) },   // faccia al sole: appena più calda del colore pieno
@@ -52,6 +55,8 @@ const VERT = /* glsl */`
 const FRAG = /* glsl */`
   uniform sampler2D map; uniform vec3 uColore, uSole, uLuce, uMezzo, uOmbra, uInchiostro; uniform vec2 uSoglie;
   uniform float uOpacita;
+  // cambio colori (abitanti fatti dal protagonista): fino a 3 coppie da → a, dentro una tolleranza
+  uniform vec3 uDa[3]; uniform vec3 uA[3]; uniform float uTolleranza;
   varying vec2 vUv; varying vec3 vNormale; varying vec3 vMondo;
   #ifdef USE_COLOR
     varying vec3 vColore;
@@ -65,6 +70,9 @@ const FRAG = /* glsl */`
     #ifdef MAPPA
       c *= texture2D(map, vUv).rgb;
     #endif
+    #ifdef RICOLORA
+      for (int i = 0; i < 3; i++) if (distance(c, uDa[i]) < uTolleranza) c = uA[i] * (c / max(uDa[i], vec3(0.02)));
+    #endif
     #ifdef USE_COLOR
       c *= vColore;
     #endif
@@ -75,14 +83,21 @@ const FRAG = /* glsl */`
   }`;
 
 // colore base: la texture e il colore del materiale glTF (lineare nel file: qui si lavora coi valori «come si vedono»)
-export function materialeTinta({ map = null, colore = '#ffffff', coloriVertice = false, nebbia = true } = {}) {
+export function materialeTinta({ map = null, colore = '#ffffff', coloriVertice = false, nebbia = true, ricolora = null, personaggio = false } = {}) {
   const c = new THREE.Color(colore);
+  // ricolora: [['#da', '#a'], …] (max 3), tolleranza nella distanza RGB 0-1
+  const da = [0, 1, 2].map((i) => new THREE.Color(ricolora?.[i]?.[0] ?? '#000000'));
+  const a = [0, 1, 2].map((i) => new THREE.Color(ricolora?.[i]?.[1] ?? '#000000'));
+  const defines = {};
+  if (map) defines.MAPPA = '';
+  if (ricolora) defines.RICOLORA = '';
   return new THREE.ShaderMaterial({
     uniforms: {
       map: { value: map }, uColore: { value: c }, uOpacita: { value: 1 }, uSpessore: SPESSORE,
-      ...TONI, ...FOSCHIA, ...(nebbia ? {} : { uForza: { value: 0 } }),
+      uDa: { value: da }, uA: { value: a }, uTolleranza: { value: ricolora ? 0.16 : 0 },
+      ...TONI, ...(personaggio ? { uSole: { value: SOLE_PERSONAGGI } } : {}), ...FOSCHIA, ...(nebbia ? {} : { uForza: { value: 0 } }),
     },
-    defines: map ? { MAPPA: '' } : {},
+    defines,
     vertexColors: coloriVertice,
     vertexShader: VERT, fragmentShader: FRAG,
   });
@@ -180,7 +195,7 @@ const visto = (c) => c.clone().convertLinearToSRGB();
 
 // tutto un modello caricato col GLTFLoader passa al look: materiale a toni + guscio per ogni mesh
 // tinte: { nomeMateriale: '#rrggbb' } per i materiali grigi da colorare (pelle, capelli, vestito dell'avatar)
-export function inchiostra(radice, { tinte = {}, contorno = true, nebbia = true } = {}) {
+export function inchiostra(radice, { tinte = {}, contorno = true, nebbia = true, ricolora = null, personaggio = false } = {}) {
   const mesh = [];
   radice.traverse((o) => { if (o.isMesh) mesh.push(o); });
   for (const m of mesh) {
@@ -188,7 +203,7 @@ export function inchiostra(radice, { tinte = {}, contorno = true, nebbia = true 
     const map = vecchio.map || null;
     if (map) { map.colorSpace = THREE.NoColorSpace; map.needsUpdate = true; }
     const colore = tinte[vecchio.name] ? new THREE.Color(tinte[vecchio.name]) : visto(vecchio.color ?? new THREE.Color(1, 1, 1));
-    m.material = materialeTinta({ map, colore: '#' + colore.getHexString(), coloriVertice: !!m.geometry.attributes.color, nebbia });
+    m.material = materialeTinta({ map, colore: '#' + colore.getHexString(), coloriVertice: !!m.geometry.attributes.color, nebbia, ricolora, personaggio });
     m.material.name = vecchio.name;
     m.frustumCulled = false;
     // (il materiale vecchio non si butta: le copie dello stesso modello lo leggono ancora)

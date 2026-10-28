@@ -33,6 +33,8 @@ GIRO = opz('--giro', base=0.0)
 ALTO = opz('--alto')
 PIEDE = opz('--piede', 2)
 TEX = int(opz('--tex', base=512))
+TRI = opz('--tri', tipo=int)            # triangoli voluti (Decimate): per i modelli densi (SAM 3 arriva a 24.000)
+INCLINA = opz('--inclina', base=0.0)    # gradi attorno a x: raddrizza un modello nato da un disegno visto dall'alto
 ANTEPRIMA = opz('--anteprima', tipo=str)
 
 
@@ -72,7 +74,18 @@ bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
 bm.to_mesh(me)
 bm.free()
 
-# giro, misura, base a terra (Blender: z in su; il glb esce con y in su)
+# meno triangoli (dopo la saldatura, se no le cuciture si aprono)
+if TRI:
+    tri0 = sum(len(p.vertices) - 2 for p in me.polygons)
+    if tri0 > TRI:
+        mod = ob.modifiers.new('meno', 'DECIMATE')
+        mod.ratio = TRI / tri0
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        print('DECIMATE', tri0, '→', sum(len(p.vertices) - 2 for p in me.polygons))
+
+# inclinazione, giro, misura, base a terra (Blender: z in su; il glb esce con y in su)
+if INCLINA:
+    me.transform(Matrix.Rotation(math.radians(INCLINA), 4, 'X'))
 me.transform(Matrix.Rotation(math.radians(GIRO), 4, 'Z'))
 co = np.array([v.co[:] for v in me.vertices])
 mn, mx = co.min(0), co.max(0)

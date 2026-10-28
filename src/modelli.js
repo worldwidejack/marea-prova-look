@@ -20,10 +20,16 @@ export const CATALOGO = {
   pescatore: { file: 'pescatore.glb', giro: 0, alto: 2.3, scatola: [0.9, 0.9, 2.0] },
   // il protagonista: modello rigato da Mixamo con le sue mosse (strumenti/blender_mixamo.py); se manca, il segnaposto
   // chr_base di MAREA con le 5 clip fatte da codice
-  eroe: { file: 'eroe_mixamo.glb', giro: 0, alto: 2.5, scatola: [0.8, 0.8, 2.5], animato: true },
-  eroe_chr: {
-    file: 'eroe.glb', giro: 180, alto: 2.5, scatola: [0.8, 0.8, 2.5], animato: true,
-    tinte: { mat_pelle: '#f0a878', mat_capelli: '#8a5236', mat_vestito: '#f6efe2' }, nascondi: /^cappello_/,
+  // (i pantaloncini, nella texture ridotta, sono finiti sul verde scurissimo della tavolozza: si riportano al verde acqua)
+  eroe: { file: 'eroe_mixamo.glb', giro: 0, alto: 2.5, scatola: [0.8, 0.8, 2.5], animato: true, ricolora: [['#27302e', '#2e6f86']] },
+  // gli abitanti per la prova: il protagonista ricolorato (crediti finiti per farne di nuovi, 28/10), con la sua mossa
+  barista: {
+    file: 'eroe_mixamo.glb', giro: 0, alto: 2.5, scatola: [0.9, 0.9, 2.5], animato: true, mossa: 'fermo',
+    ricolora: [['#266479', '#3a3634'], ['#27302e', '#2c2826'], ['#55331f', '#2e1a10']],
+  },
+  pescatore: {
+    file: 'eroe_mixamo.glb', giro: 0, alto: 2.5, scatola: [0.9, 0.9, 2.0], animato: true, mossa: 'rema', abbassa: 0.62,
+    ricolora: [['#fbf6f0', '#34557e'], ['#ded4c7', '#41638f'], ['#55331f', '#d3cdc2']],
   },
 };
 
@@ -69,7 +75,7 @@ export function creaFabbricaModelli(scena, pronti, { nebbia = true } = {}) {
     const interno = new THREE.Group();
     interno.add(base);
     const m = misura(base, c);
-    inchiostra(base, { tinte: c.tinte, nebbia });
+    inchiostra(base, { tinte: c.tinte, nebbia, ricolora: c.ricolora, personaggio: !!c.animato });
     // perno a metà altezza: le capriole girano attorno alla pancia, non ai piedi
     const perno = new THREE.Group();
     perno.position.y = m.alto * 0.45; interno.position.y = -m.alto * 0.45;
@@ -90,8 +96,9 @@ export function creaFabbricaModelli(scena, pronti, { nebbia = true } = {}) {
     o.disegno = () => {}; // i modelli non cambiano disegno: girano (o.gira) e si animano (o.mixer)
     o.sposta = (x2, y2, z2) => { o.x = x2; o.y = y2; o.z = z2; o.aggiorna(); };
     o.gira = (a) => { o.giro = a; o.aggiorna(); };
+    if (c.mossa && o.clip?.[c.mossa]) { o.clip[c.mossa].play(); o.mixer.update(Math.random() * 3); }
     o.aggiorna = () => {
-      gruppo.position.set(o.x, o.y, o.z);
+      gruppo.position.set(o.x, o.y - (c.abbassa ?? 0), o.z);
       // specchio come negli sprite (x ↔ z nel mondo): riflesso in x e un quarto di giro
       gruppo.scale.set(o.specchio ? -1 : 1, 1, 1);
       gruppo.rotation.y = o.giro + (o.specchio ? Math.PI / 2 : 0);
