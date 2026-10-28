@@ -15,6 +15,8 @@ export const CATALOGO = {
   bar: { file: 'bar.glb', giro: 0, piede: [6, 5], scatola: [6.3, 5.3, 4.4] },
   capanno: { file: 'capanno.glb', giro: 0, piede: [4.5, 3.5], scatola: [4.8, 3.8, 4.2] },
   bancarella: { file: 'bancarella.glb', giro: 0, piede: [3, 1.6], scatola: [3.3, 1.9, 3.3] },
+  // le casse del pesce: l'unico oggetto non tondo dove si passa (con la camera che gira, uno sprite sembrerebbe di cartone)
+  casse_pesce: { file: 'casse_pesce.glb', giro: 0, piede: [0.9, 0.9], scatola: [0.9, 0.9, 1.1] },
   barca: { file: 'barca.glb', giro: 0, piede: [4.0, 1.7], scatola: [4.0, 1.7, 1.0] },
   barista: { file: 'barista.glb', giro: 0, alto: 2.9, scatola: [0.9, 0.9, 2.9] },
   pescatore: { file: 'pescatore.glb', giro: 0, alto: 2.3, scatola: [0.9, 0.9, 2.0] },

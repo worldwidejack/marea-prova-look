@@ -41,10 +41,17 @@ if (PIXEL) SOGLIA.value = 0.5;
 const g = creaGriglia();
 const [sprite, pronti] = await Promise.all([caricaSprite(), LOOK === 'disegni' ? {} : caricaModelli()]);
 const fab = creaFabbrica(scena, sprite);
-// la versione di Riccardo: il protagonista disegnato a pixel (3 viste, a sinistra lo specchio), se i disegni ci sono
+// la versione di Riccardo: il protagonista disegnato a pixel (9 viste, a sinistra lo specchio), se i disegni ci sono
 const spritePx = LOOK === 'sprite' ? await caricaSprite('./sprite_pixel/', { nitido: true, formato: 'png' }).catch(() => null) : null;
 const fabPx = spritePx ? creaFabbrica(scena, spritePx) : null;
 const PASSI = ['S', 'SE', 'E', 'NE', 'N'].every((d) => sprite.elenco[`eroe_${d}_4`]);
+// il protagonista a sprite: 16 direzioni se ci sono le viste di mezzo (SSE, ESE, ENE, NNE), sennò 8 (?dir=8 per confrontare)
+const DIREZIONI = fabPx && fabPx.ha('SSE_cammina_1') && parti.get('dir') !== '8' ? 16 : 8;
+// la vista di un personaggio a sprite: l'angolo fra dove guarda (nel mondo) e la camera, come nei giochi tipo Ragnarok
+function vistaDa(angolo, n = DIREZIONI) {
+  const fx = Math.sin(angolo), fz = Math.cos(angolo);
+  return direzione(fx * DESTRA.x + fz * DESTRA.z, fx * GIU_TERRA.x + fz * GIU_TERRA.z, n);
+}
 const fab3 = creaFabbricaModelli(scena, pronti);
 const effetti = creaEffetti(scena);
 // gli edifici e la barca in 3D appena c'è il modello; le persone in 3D solo nei look col personaggio 3D
@@ -81,11 +88,14 @@ const abitanti = [];
 // il pescatore 3D sta seduto sul bordo del molo con le gambe di fuori (verso +x); quello disegnato sulla sua cassetta
 const DOVE_ABITANTI = [in3d('pescatore') ? ['pescatore', 44.72, 26.2, Math.PI / 2] : ['pescatore', 44.6, 26.2, 0]];
 if (LOOK !== 'disegni') DOVE_ABITANTI.push(['barista', 33.4, 16.9, 0.6]);
+// (nel look sprite, se ci sono i disegni a pixel nelle 5 viste, gli abitanti sono quelli: guardano verso il mare)
+const GUARDA_PX = { barista: 0.6, pescatore: Math.PI * 0.5 };
 for (const [nome, x, z, giro] of DOVE_ABITANTI) {
-  const o = crea(nome, x, quotaDi(x, z), z);
+  const px = fabPx?.ha(`${nome}_S`);
+  const o = px ? fabPx.crea(`${nome}_SE`, x, quotaDi(x, z), z) : crea(nome, x, quotaDi(x, z), z);
   if (!o) continue;
   o.gira?.(giro);
-  abitanti.push({ o, nome, fase: x });
+  abitanti.push({ o, nome, fase: x, px, guarda: GUARDA_PX[nome] ?? 0, x, y: quotaDi(x, z), z });
   solidi.push([x - 0.45, z - 0.45, x + 0.45, z + 0.45]);
   ombre.push({ cx: x, cz: z, w: 0.9, d: 0.8, h: 0.8, tondo: true, fattore: 0.5 });
 }
@@ -125,7 +135,7 @@ scena.add(ombraEroe);
 function fabEroe() { return fabPx ?? fab; }
 function fotogrammaEroe() {
   if (!fabPx) return PASSI && !eroe.fermo ? `eroe_${eroe.dir}_${1 + (Math.floor(eroe.passo) % 4)}` : 'eroe_' + eroe.dir;
-  const vista = { S: 'SE', SE: 'SE', E: 'E', NE: 'NE', N: 'NE' }[eroe.dir] ?? 'SE';
+  const vista = fabPx.ha(`${eroe.dir}_cammina_1`) ? eroe.dir : ({ S: 'SE', SSE: 'SE', ESE: 'E', ENE: 'E', NNE: 'NE', N: 'NE' }[eroe.dir] ?? 'SE');
   const m = eroe.mossa;
   if (m) {
     const k = m.t / m.durata;
@@ -259,8 +269,8 @@ for (const [id, fn] of [['bScatto', () => scatto()], ['bPozione', () => bevi()],
   b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
 }
-// la camera gira solo dove tutto è 3D (gli sprite del protagonista sono disegnati per un angolo solo)
-const GIRA = EROE3D;
+// la camera gira in tutte e tre le versioni: nella 3 gli sprite (protagonista e abitanti) cambiano vista con lei
+const GIRA = EROE3D || !!fabPx;
 if (!GIRA) document.getElementById('bCamera').style.display = 'none';
 function giraCamera() {
   if (!GIRA) return;
@@ -372,6 +382,7 @@ function aggiornaEroe(dt) {
     ombraEroe.position.set(eroe.x - 0.08, y + 0.01, eroe.z + 0.12);
     return;
   }
+  if (fabPx) { const d = vistaDa(eroe.angolo); eroe.dir = d.vista; eroe.specchio = d.specchio; }
   const n = fotogrammaEroe();
   eroe.o.disegno(n, eroe.specchio);
   const salto = !PASSI && !fabPx && !eroe.fermo ? Math.abs(Math.sin(eroe.passo * 0.5)) * 0.12 : 0;
@@ -419,7 +430,7 @@ function ridimensiona() {
   // contorno: ~3 px sullo schermo nel look inchiostro (come i disegni), un pixel (poco meno) nel look pixel
   if (pixel) {
     pixel.misura(camera.cam, w, h, camera.pxUnita()); SPESSORE.value = pixel.unita() * 0.85;
-    if (spritePx) { for (const d of Object.values(spritePx.elenco)) d.s = 1 / pixel.unita(); eroe.o?.aggiorna(); }
+    if (spritePx) { for (const d of Object.values(spritePx.elenco)) d.s = 1 / pixel.unita(); fabPx.riorienta(); }
   }
   else SPESSORE.value = 3.1 / camera.pxUnita();
   interno?.misura(w, h);
@@ -429,11 +440,14 @@ ridimensiona();
 
 function passo(dt) {
   tempo += dt;
-  if (camera.passo(dt)) fab.riorienta();
+  if (camera.passo(dt)) { fab.riorienta(); fabPx?.riorienta(); }
   effetti.passo(dt);
   passoScie(dt);
   for (const a of abitanti) {
-    if (a.o.mixer) a.o.mixer.update(dt);
+    if (a.px) {
+      const d = vistaDa(a.guarda, 8), q = pixel.agganciaPunto(a.x, a.y, a.z);
+      a.o.disegno(`${a.nome}_${d.vista}`, d.specchio); a.o.sposta(q.x, q.y, q.z);
+    } else if (a.o.mixer) a.o.mixer.update(dt);
     else if (a.o.dati.modo === '3d') a.o.interno.scale.y = 1 + Math.sin(tempo * 2.1 + a.fase) * 0.012; // respira
     else a.o.disegno(Math.floor(tempo / 1.1 + a.fase) % 2 && fab.ha(a.nome + '_2') ? a.nome + '_2' : a.nome);
   }
@@ -443,7 +457,8 @@ function passo(dt) {
     barca.aggiorna(dt, inp);
     if (EROE3D) eroe.o.mixer.update(dt);
     else if (fabPx) {
-      if (inp) { const d = direzione(inp.dx, inp.dy); eroe.dir = d.vista; eroe.specchio = d.specchio; }
+      const ab = barca.posizione().angolo, d = vistaDa(Math.atan2(Math.cos(ab), -Math.sin(ab)));
+      eroe.dir = d.vista; eroe.specchio = d.specchio;
       eroe.fermo = true; eroe.mossa = null;
       const b = barca.posizione(), q = pixel.agganciaPunto(b.x, 0.05, b.z);
       eroe.o.disegno(fotogrammaEroe(), eroe.specchio); eroe.o.sposta(q.x, q.y, q.z);

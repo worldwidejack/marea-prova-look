@@ -1,7 +1,35 @@
 {
-  "sottotitolo": "Stesso porto, stesso punto, lui alto uguale ovunque. 3D: bar, capanno e bancarella SAM 3, barca e protagonista F3 Hunyuan, mosse Mixamo; abitanti 3D = F3 ricolorato.",
-  "disegni": {"righe": ["~125 disegni (Codex), protagonista 25", "una sera di lavoro (26/10), 0 crediti", "ogni mossa nuova: ~5 disegni per vista", "la camera non può girare"]},
-  "inchiostro": {"righe": ["5 modelli 3D: 45 crediti (1 bar Hunyuan buttato)", "6 mosse Mixamo, gratis; pozione 12 disegni", "~1 ora e mezza (motore, modelli, scheletro)", "personaggio nuovo: 1 disegno + 1-14 crediti"]},
-  "pixel": {"righe": ["gli stessi modelli e le stesse mosse", "+ 0 disegni, + 0 crediti, ~10 minuti", "è un altro modo di disegnare la stessa scena", "la camera gira (tasto C), come nell'inchiostro"]},
-  "sprite": {"righe": ["protagonista: 36 disegni (3 fogli Codex), ~15 min", "ogni mossa nuova: 12 disegni per personaggio", "in barca, seduto, vestiti: altri disegni", "la camera non può girare"]}
+ "sottotitolo": "Stesso porto, stesso punto, lui alto uguale ovunque. 3D: bar, capanno, bancarella e casse SAM 3, barca e protagonista F3 Hunyuan, mosse Mixamo; abitanti 3D = F3 ricolorato.",
+ "disegni": {
+  "righe": [
+   "~125 disegni (Codex), protagonista 25",
+   "una sera di lavoro (26/10), 0 crediti",
+   "ogni mossa nuova: ~5 disegni per vista",
+   "la camera non può girare"
+  ]
+ },
+ "inchiostro": {
+  "righe": [
+   "6 modelli 3D: 46 crediti (1 bar Hunyuan buttato)",
+   "6 mosse Mixamo, gratis; pozione 12 disegni",
+   "~1 ora e mezza (motore, modelli, scheletro)",
+   "personaggio nuovo: 1 disegno + 1-14 crediti"
+  ]
+ },
+ "pixel": {
+  "righe": [
+   "gli stessi modelli e le stesse mosse",
+   "+ 0 disegni, + 0 crediti, ~10 minuti",
+   "è un altro modo di disegnare la stessa scena",
+   "la camera gira (tasto C), come nell'inchiostro"
+  ]
+ },
+ "sprite": {
+  "righe": [
+   "protagonista: 108 disegni (9 viste × 12), Codex",
+   "+82 disegni e ~35 min per la camera che gira",
+   "ogni mossa nuova: 36 disegni per personaggio",
+   "la camera gira (tasto C), lui a scatti di 22,5°"
+  ]
+ }
 }

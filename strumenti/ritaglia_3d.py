@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Dai disegni nero 1 (fondo magenta, marea-prova-st/concept/n1/gen) alle immagini da dare al generatore 3D:
 una figura sola, scontornata (alfa vero, bordo magenta tolto), centrata in un quadrato con margine.
-Uso: <python del venv di fenaki> strumenti/ritaglia_3d.py
+Uso: <python del venv di fenaki> strumenti/ritaglia_3d.py [nome …]  (senza nomi: tutti)
 """
 import os
+import sys
 import cv2
 import numpy as np
 from PIL import Image
@@ -16,6 +17,8 @@ OUT = os.path.join(QUI, '..', 'concept', '3d', 'input')
 LAVORI = [
     ('bar', 'bar.png', 0), ('capanno', 'capanno.png', 0), ('bancarella', 'bancarella.png', 0),
     ('barca', 'barca.png', 0), ('barista', 'abitanti_barista.png', 1), ('pescatore', 'abitanti_pescatore.png', 1),
+    # dai fogli a griglia: (riga, colonna, celle per lato) prima di cercare la figura
+    ('casse_pesce', 'porto.png', 0, (0, 1, 4)),
 ]
 
 
@@ -28,8 +31,14 @@ def alfa_magenta(rgb):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for nome, file, quale in LAVORI:
+    for nome, file, quale, *cella in LAVORI:
+        if sys.argv[1:] and nome not in sys.argv[1:]:
+            continue
         im = np.array(Image.open(os.path.join(GEN, file)).convert('RGB'))
+        if cella:
+            r, c, n = cella[0]
+            H, W = im.shape[:2]
+            im = np.ascontiguousarray(im[r * H // n:(r + 1) * H // n, c * W // n:(c + 1) * W // n])
         a = alfa_magenta(im)
         piena = (a > 0.5).astype(np.uint8)
         piena = cv2.morphologyEx(piena, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))

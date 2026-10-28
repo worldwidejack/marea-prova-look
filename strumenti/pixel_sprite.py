@@ -6,6 +6,8 @@ del protagonista per la versione di Riccardo (look pixel con personaggio disegna
   d'area, poi alfa netta (0/1), tavolozza comune di tutte le viste (k-medie) e contorno di 1 pixel dove manca;
 - piedi: ogni riga ha la sua linea di base (la più bassa della riga), il punto d'appoggio sta al centro della figura.
 Scrive public/sprite_pixel/<vista>_<mossa>_<n>.png e public/sprite_pixel/elenco.json (stesso formato degli sprite).
+Viste: le 9 della metà destra (S, SSE, SE, ESE, E, ENE, NE, NNE, N; la sinistra è lo specchio), quelle che ci sono.
+Abitanti (concept/sprite_pixel/npc_<nome>.png: 5 colonne × 1 riga, S SE E NE N): <nome>_<vista>.png, tavolozza loro.
 
 Uso: <python del venv di fenaki> strumenti/pixel_sprite.py [--alto 48]
 """
@@ -20,7 +22,10 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(QUI, '..', 'concept', 'sprite_pixel')
 OUT = os.path.join(QUI, '..', 'public', 'sprite_pixel')
 ALTO = int(sys.argv[sys.argv.index('--alto') + 1]) if '--alto' in sys.argv else 48
-VISTE = ['SE', 'E', 'NE']
+VISTE = ['S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE', 'N']
+# abitanti: alto in px (lo chignon, la canna), piede e scatola come gli altri oggetti
+NPC = {'barista': (54, [0.9, 0.9], [0.9, 0.9, 2.5]), 'pescatore': (46, [0.9, 0.9], [0.9, 0.9, 2.0])}
+VISTE_NPC = ['S', 'SE', 'E', 'NE', 'N']
 RIGHE = ['cammina', 'scatto', 'bevi']
 INCHIOSTRO = np.array([21, 16, 14], dtype=np.float64)
 
@@ -30,15 +35,15 @@ def alfa_magenta(rgb):
     return 1 - np.clip((np.minimum(r, b) - g - 60) / 80, 0, 1)
 
 
-def celle(im):
-    """Le 12 figure del foglio: per ogni cella il ritaglio RGBA e il fondo della figura nella cella."""
+def celle(im, righe=3, colonne=4):
+    """Le figure del foglio (righe × colonne): per ogni cella il ritaglio RGBA e il fondo della figura nella cella."""
     rgb = np.array(im.convert('RGB'))
     a = alfa_magenta(rgb)
     H, W = a.shape
     out = []
-    for r in range(3):
-        for c in range(4):
-            y0, y1, x0, x1 = r * H // 3, (r + 1) * H // 3, c * W // 4, (c + 1) * W // 4
+    for r in range(righe):
+        for c in range(colonne):
+            y0, y1, x0, x1 = r * H // righe, (r + 1) * H // righe, c * W // colonne, (c + 1) * W // colonne
             m = (a[y0:y1, x0:x1] > 0.5).astype(np.uint8)
             # si tiene la figura (la macchia più grande) e i pezzi attaccati a lei; via polvere e linee di velocità staccate
             n, lab, st, _ = cv2.connectedComponentsWithStats(m)
@@ -78,6 +83,50 @@ def kmedie(x, k, giri=20):
     return c
 
 
+def quantizza(c, pal):
+    """Colori della tavolozza, contorno di 1 pixel dove manca, tela col margine e i piedi sulla riga di base."""
+    C, M = c['C'], c['M']
+    idx = ((C[..., None, :] - pal[None, None]) ** 2).sum(-1).argmin(-1)
+    Q = pal[idx]
+    # contorno di 1 pixel: ogni pixel pieno che tocca il vuoto (4 vicini) diventa inchiostro se non è già scuro
+    pad = np.pad(M, 1)
+    bordo = M & ~(pad[:-2, 1:-1] & pad[2:, 1:-1] & pad[1:-1, :-2] & pad[1:-1, 2:])
+    scuro = Q.sum(-1) < 150
+    Q[bordo & ~scuro] = INCHIOSTRO
+    h, w = M.shape
+    tela = np.zeros((h + 2 + c['giu'], w + 2, 4), np.uint8)
+    tela[1:1 + h, 1:1 + w, :3] = Q.astype(np.uint8)
+    tela[1:1 + h, 1:1 + w, 3] = M * 255
+    return tela
+
+
+def abitanti(elenco):
+    """Gli abitanti in 5 viste: tutte alla stessa scala (la vista più alta = alto px), piedi sulla stessa base."""
+    for nome, (alto, piede, scatola) in NPC.items():
+        f = os.path.join(SRC, f'npc_{nome}.png')
+        if not os.path.exists(f):
+            continue
+        cs = celle(Image.open(f), 1, 5)
+        s = alto / max(c['rgba'].shape[0] for c in cs if c)
+        base = max(c['fondo'] for c in cs if c)
+        for c in cs:
+            if c:
+                c['C'], c['M'] = rimpicciolisci(c['rgba'], s)
+                c['giu'] = round((base - c['fondo']) * s)
+        px = np.concatenate([c['C'][c['M']] for c in cs if c])
+        pal = np.vstack([kmedie(px[::max(1, len(px) // 20000)], 13), INCHIOSTRO])
+        for c in cs:
+            if not c:
+                continue
+            tela = quantizza(c, pal)
+            n = f"{nome}_{VISTE_NPC[c['col']]}"
+            Image.fromarray(tela, 'RGBA').save(os.path.join(OUT, n + '.png'))
+            H2, W2 = tela.shape[:2]
+            elenco[n] = {'w': W2, 'h': H2, 's': 19.2, 'ax': W2 // 2, 'ay': H2 - 1, 'piede': piede, 'scatola': scatola,
+                         'modo': 'piano', 'avanti': 0.3}
+        print(nome, 'scala', round(s, 3), [c['M'].shape for c in cs if c])
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     fogli = {v: Image.open(os.path.join(SRC, f'pixel_{v}.png')) for v in VISTE if os.path.exists(os.path.join(SRC, f'pixel_{v}.png'))}
@@ -101,28 +150,19 @@ def main():
     pal = np.vstack([kmedie(px[::max(1, len(px) // 20000)], 15), INCHIOSTRO, [[120, 214, 182], [196, 246, 226]]])
     elenco = {}
     for v, cs in tutte.items():
+        print(v, 'scala', round(ALTO / max(c['rgba'].shape[0] for c in cs if c and c['riga'] == 0), 3),
+              'larghe', [c['M'].shape[1] for c in cs if c and c['riga'] == 0])
         for c in cs:
             if not c:
                 continue
-            C, M = c['C'], c['M']
-            idx = ((C[..., None, :] - pal[None, None]) ** 2).sum(-1).argmin(-1)
-            Q = pal[idx]
-            # contorno di 1 pixel: ogni pixel pieno che tocca il vuoto (4 vicini) diventa inchiostro se non è già scuro
-            pad = np.pad(M, 1)
-            bordo = M & ~(pad[:-2, 1:-1] & pad[2:, 1:-1] & pad[1:-1, :-2] & pad[1:-1, 2:])
-            scuro = Q.sum(-1) < 150
-            Q[bordo & ~scuro] = INCHIOSTRO
-            h, w = M.shape
-            # tela con un pixel di margine e i piedi sulla riga di base
-            tela = np.zeros((h + 2 + c['giu'], w + 2, 4), np.uint8)
-            tela[1:1 + h, 1:1 + w, :3] = Q.astype(np.uint8)
-            tela[1:1 + h, 1:1 + w, 3] = M * 255
+            tela = quantizza(c, pal)
             nome = f"{v}_{RIGHE[c['riga']]}_{c['col'] + 1}"
             Image.fromarray(tela, 'RGBA').save(os.path.join(OUT, nome + '.png'))
             H2, W2 = tela.shape[:2]
             # punto d'appoggio: angolo fra due pixel (intero), al centro della figura, sulla riga sotto i piedi
             elenco[nome] = {'w': W2, 'h': H2, 's': 19.2, 'ax': W2 // 2, 'ay': H2 - 1, 'piede': [0.8, 0.8],
                             'scatola': [0.8, 0.8, 2.5], 'modo': 'piano', 'avanti': 0.3}
+    abitanti(elenco)
     json.dump(elenco, open(os.path.join(OUT, 'elenco.json'), 'w'), indent=0)
     print(len(elenco), 'sprite', 'tavolozza', len(pal), 'colori ->', OUT)
 
