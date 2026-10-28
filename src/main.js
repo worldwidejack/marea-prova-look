@@ -14,7 +14,7 @@ import { OGGETTI } from './oggetti.js';
 import { spargi } from './decori.js';
 import { creaInterno } from './interno.js';
 import { creaBarca } from './barca.js';
-import { caricaModelli, creaFabbricaModelli } from './modelli.js';
+import { caricaModelli, creaFabbricaModelli, CATALOGO } from './modelli.js';
 import { SPESSORE, sagomaDietro } from './inchiostro.js';
 import { creaPixel } from './pixel.js';
 import { creaNumeri } from './numeri.js';
@@ -39,7 +39,11 @@ const camera = creaCamera();
 const pixel = PIXEL ? creaPixel(renderer) : null;
 if (PIXEL) SOGLIA.value = 0.5;
 const g = creaGriglia();
-const [sprite, pronti] = await Promise.all([caricaSprite(), LOOK === 'disegni' ? {} : caricaModelli()]);
+// nei look 3D non si scaricano i disegni che hanno il modello né il protagonista 2.5D (~1,3 MB in meno); nel look sprite
+// le persone restano (se mancano i loro disegni a pixel, tornano quelli della prova 2.5D)
+const salta = LOOK === 'disegni' ? null
+  : (n) => n.startsWith('eroe_') || (n in CATALOGO && !(LOOK === 'sprite' && /^(pescatore|barista)/.test(n)));
+const [sprite, pronti] = await Promise.all([caricaSprite('./sprite/', { salta }), LOOK === 'disegni' ? {} : caricaModelli()]);
 const fab = creaFabbrica(scena, sprite);
 // la versione di Riccardo: il protagonista disegnato a pixel (9 viste, a sinistra lo specchio), se i disegni ci sono
 const spritePx = LOOK === 'sprite' ? await caricaSprite('./sprite_pixel/', { nitido: true, formato: 'png' }).catch(() => null) : null;

@@ -1,0 +1,8 @@
+{
+ "nota": "SAM 3 ha dipinto il faraglione tutto coi viola d'ombra del disegno: il viola principale torna al rosa delle facce al sole (184,129,126) e il viola scuro al malva, così luce e ombra le fa il motore a 3 toni, come nel disegno. Vale anche per lo scoglio (stesso modello).",
+ "cambi": {
+  "5": [184, 129, 126],
+  "0": [160, 115, 130],
+  "1": [130, 101, 132]
+ }
+}

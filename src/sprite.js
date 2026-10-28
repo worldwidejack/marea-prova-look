@@ -53,8 +53,10 @@ const quad = new THREE.PlaneGeometry(1, 1);
 const orient = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(DESTRA, SU, VERSO_CAMERA));
 
 // nitido = disegni a pixel (prova dei look, versione di Riccardo): niente filtro, ogni pixel del disegno resta un quadrato
-export async function caricaSprite(cartella = './sprite/', { nitido = false, formato = 'webp' } = {}) {
+// salta(nome) = true: quel disegno non si scarica (nei look 3D c'è il modello al suo posto)
+export async function caricaSprite(cartella = './sprite/', { nitido = false, formato = 'webp', salta = null } = {}) {
   const elenco = await (await fetch(cartella + 'elenco.json')).json();
+  if (salta) for (const n of Object.keys(elenco)) if (salta(n)) delete elenco[n];
   const carica = new THREE.TextureLoader();
   const texture = {};
   await Promise.all(Object.keys(elenco).map((n) => carica.loadAsync(`${cartella}${n}.${formato}`).then((t) => {

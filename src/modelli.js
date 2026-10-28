@@ -18,6 +18,22 @@ export const CATALOGO = {
   // le casse del pesce: l'unico oggetto non tondo dove si passa (con la camera che gira, uno sprite sembrerebbe di cartone)
   casse_pesce: { file: 'casse_pesce.glb', giro: 0, piede: [0.9, 0.9], scatola: [0.9, 0.9, 1.1] },
   barca: { file: 'barca.glb', giro: 0, piede: [4.0, 1.7], scatola: [4.0, 1.7, 1.0] },
+  // alberi, palme, lampione e scogli (28/10, SAM 3 sui disegni nero 1): da disegni sempre girati verso la camera, con la
+  // camera che gira, si vedevano di cartone. alto = l'altezza del disegno; piede e scatola quelli degli sprite (collisioni
+  // e ombre cotte); base = l'origine è il piede del tronco (blender_modello.py --base), non il centro del rettangolo;
+  // giro = quello che dalla camera del gioco somiglia di più al disegno (strumenti/giro_modello.py)
+  palma: { file: 'palma.glb', giro: 10, alto: 7.5, piede: [0.8, 0.8], scatola: [1.0, 1.0, 7.5], base: true },
+  palma_bassa: { file: 'palma_bassa.glb', giro: 85, alto: 5.5, piede: [0.8, 0.8], scatola: [1.0, 1.0, 5.5], base: true },
+  albero_rosa: { file: 'albero_rosa.glb', giro: 30, alto: 6.8, piede: [1.2, 1.2], scatola: [3.0, 3.0, 6.8], base: true },
+  albero_arancio: { file: 'albero_arancio.glb', giro: 50, alto: 6.4, piede: [1.2, 1.2], scatola: [3.0, 3.0, 6.4], base: true },
+  lampione: { file: 'lampione.glb', giro: 145, alto: 3.8, piede: [0.5, 0.5], scatola: [0.5, 0.5, 3.8], base: true },
+  faraglione: { file: 'faraglione.glb', giro: 185, alto: 5.0, piede: [3.0, 3.0], scatola: [3.0, 3.0, 5.0] },
+  // crediti finiti (28/10): l'albero verde è la forma dell'arancio con la chioma ridipinta nei colori del suo disegno
+  // (concept/3d/tavolozze/albero_da_arancio.json; il suo SAM 3 era uscito piatto), lo scoglio è il faraglione più basso e
+  // largo, girato da un altro lato
+  albero: { file: 'albero.glb', giro: 50, alto: 7.0, piede: [1.2, 1.2], scatola: [3.2, 3.2, 7.0], base: true },
+  betulla: { file: 'betulla.glb', giro: 70, alto: 7.2, piede: [0.8, 0.8], scatola: [2.2, 2.2, 7.2], base: true },
+  scoglio: { file: 'faraglione.glb', giro: 100, alto: 2.4, allarga: 1.3, piede: [2.6, 2.2], scatola: [2.6, 2.2, 2.4] },
   barista: { file: 'barista.glb', giro: 0, alto: 2.9, scatola: [0.9, 0.9, 2.9] },
   pescatore: { file: 'pescatore.glb', giro: 0, alto: 2.3, scatola: [0.9, 0.9, 2.0] },
   // il protagonista: modello rigato da Mixamo con le sue mosse (strumenti/blender_mixamo.py); se manca, il segnaposto
@@ -58,10 +74,12 @@ function misura(radice, c) {
   const dim = box.getSize(new THREE.Vector3());
   const s = c.alto ? c.alto / dim.y : Math.min(c.piede[0] / dim.x, c.piede[1] / dim.z);
   radice.scale.multiplyScalar(s);
+  if (c.allarga) { radice.scale.x *= c.allarga; radice.scale.z *= c.allarga; } // più largo a parità d'altezza
   radice.updateMatrixWorld(true);
   box.setFromObject(radice, true);
   const centro = box.getCenter(new THREE.Vector3());
-  radice.position.sub(new THREE.Vector3(centro.x, box.min.y, centro.z));
+  // (base: l'origine è già il piede del tronco, il giro le gira attorno: in pianta non si sposta)
+  radice.position.sub(new THREE.Vector3(c.base ? 0 : centro.x, box.min.y, c.base ? 0 : centro.z));
   const d = box.getSize(new THREE.Vector3());
   return { piede: c.piede ?? [d.x, d.z], alto: d.y };
 }

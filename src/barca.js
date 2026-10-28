@@ -11,7 +11,8 @@ export function creaBarca(fab, g, scena, opz = {}) {
   const m3 = opz.modello?.ha('barca') ? opz.modello : null;
   const o = m3 ? m3.crea('barca', b.x, 0, b.z) : fab.crea('barca_su', b.x, 0, b.z);
   const eroe3d = opz.eroe3d ?? null;
-  const remata = eroe3d ? null : fab.crea('eroe_SE', b.x, 0, b.z);
+  // (lui disegnato in barca solo con la barca disegnata: con quella 3D il disegno() si ferma prima)
+  const remata = eroe3d || m3 ? null : fab.crea('eroe_SE', b.x, 0, b.z);
   remata?.visibile(false);
   const haRemi = () => !!fab.ha?.('rema_su_1');
   // anelli sull'acqua dietro la barca

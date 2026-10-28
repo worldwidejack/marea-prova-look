@@ -1,0 +1,60 @@
+{
+ "nota": "L'albero verde (il primo tentativo SAM 3 è uscito piatto) = la forma dell'albero arancio con la chioma nei colori del disegno verde (tavolozza albero.json): l'arancio va all'oliva, il giallo resta giallo, i rossi d'ombra vanno ai verdi scuri, i marroni fra un ciuffo e l'altro al verde scurissimo. Solo sulla chioma: facce sopra il 28 % dell'altezza, tranne il tronco (entro 0,6 dall'asse, sotto il 55 %).",
+ "cambi": {
+  "0": [
+   93,
+   122,
+   54
+  ],
+  "1": [
+   218,
+   177,
+   31
+  ],
+  "2": [
+   53,
+   92,
+   69
+  ],
+  "4": [
+   61,
+   104,
+   70
+  ],
+  "6": [
+   45,
+   82,
+   72
+  ],
+  "7": [
+   113,
+   129,
+   46
+  ],
+  "5": [
+   45,
+   82,
+   72
+  ],
+  "9": [
+   34,
+   46,
+   35
+  ],
+  "12": [
+   34,
+   46,
+   35
+  ],
+  "13": [
+   163,
+   165,
+   41
+  ]
+ },
+ "sopra": 0.28,
+ "tronco": [
+  0.6,
+  0.55
+ ]
+}

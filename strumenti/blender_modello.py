@@ -7,6 +7,7 @@
 
 Uso: /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P strumenti/blender_modello.py -- \
        in.glb out.glb --tavolozza concept/3d/tavolozze/bar.json --piede 6 5 [--giro 0] [--tex 512] [--anteprima a.png]
+       piante: --alto H --liscio --base (normali lisce, origine sul tronco)
 """
 import json
 import math
@@ -36,6 +37,14 @@ TEX = int(opz('--tex', base=512))
 TRI = opz('--tri', tipo=int)            # triangoli voluti (Decimate): per i modelli densi (SAM 3 arriva a 24.000)
 INCLINA = opz('--inclina', base=0.0)    # gradi attorno a x: raddrizza un modello nato da un disegno visto dall'alto
 ANTEPRIMA = opz('--anteprima', tipo=str)
+# normali lisce: per alberi e palme i 3 toni seguono la chioma a fasce invece di accendersi faccetta per faccetta
+# (e il file pesa meno: i vertici non si sdoppiano a ogni faccia)
+LISCIO = '--liscio' in argv
+# origine sul piede del tronco invece che al centro del rettangolo (in gioco: «base: true» nel CATALOGO di modelli.js)
+BASE = '--base' in argv
+# --cambia file.json: {"cambi": {"<indice nella tavolozza>": [r, g, b]}}, dopo la riduzione alla tavolozza;
+# con "sopra": 0.38 nel file vale solo per le facce più alte del 38 % dell'altezza (la chioma, non il tronco)
+CAMBIA = opz('--cambia', tipo=str)
 
 
 def lab(rgb):
@@ -98,10 +107,45 @@ elif PIEDE:
 else:
     s = 1.0
 centro = Vector(((mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, mn[2]))
+if BASE:
+    # il centro in pianta è il tronco, non il rettangolo: una palma che pende ha la chioma lontana dal piede.
+    # Il tronco = la fetta fra il 14 e il 22 % dell'altezza (sopra erba e sassi, sotto la chioma), mediana dei punti
+    fetta = (co[:, 2] > mn[2] + 0.14 * dim[2]) & (co[:, 2] < mn[2] + 0.22 * dim[2])
+    centro = Vector((float(np.median(co[fetta, 0])), float(np.median(co[fetta, 1])), mn[2]))
+    print('BASE tronco a', round((centro.x - (mn[0] + mx[0]) / 2) * s, 2), round((centro.y - (mn[1] + mx[1]) / 2) * s, 2), 'dal centro del rettangolo')
 me.transform(Matrix.Scale(s, 4) @ Matrix.Translation(-centro))
 me.update()
 for p in me.polygons:
-    p.use_smooth = False  # faccette piatte: una faccia, un tono
+    p.use_smooth = LISCIO  # di serie faccette piatte: una faccia, un tono
+
+def zona_sopra(quota, w, h, tronco=None):
+    """i pixel della texture che stanno su facce più alte di quota × altezza (tronco = [raggio, fino a]: senza le facce
+    a meno di raggio dall'asse e più basse di «fino a» × altezza): ogni triangolo scelto si dipinge nella sua posizione UV
+    (i pixel dell'immagine partono dal basso, come le UV)"""
+    uv = me.uv_layers.active.data
+    alto = max(v.co.z for v in me.vertices)
+    zona = np.zeros((h, w), bool)
+    for p in me.polygons:
+        c = sum((me.vertices[i].co for i in p.vertices), Vector()) / len(p.vertices)
+        if c.z < quota * alto or (tronco and math.hypot(c.x, c.y) < tronco[0] and c.z < tronco[1] * alto):
+            continue
+        t = np.array([uv[k].uv[:] for k in p.loop_indices]) * (w, h)
+        x0, y0 = np.floor(t.min(0)).astype(int) - 1
+        x1, y1 = np.ceil(t.max(0)).astype(int) + 1
+        xs, ys = np.meshgrid(np.arange(max(0, x0), min(w, x1)) + 0.5, np.arange(max(0, y0), min(h, y1)) + 0.5)
+        dentro = np.zeros(xs.shape, bool)
+        for a in range(1, len(t) - 1):  # a ventaglio dal primo vertice
+            (ax, ay), (bx, by), (cx, cy) = t[0], t[a], t[a + 1]
+            det = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+            if abs(det) < 1e-9:
+                continue
+            l1 = ((by - cy) * (xs - cx) + (cx - bx) * (ys - cy)) / det
+            l2 = ((cy - ay) * (xs - cx) + (ax - cx) * (ys - cy)) / det
+            dentro |= (l1 >= -0.02) & (l2 >= -0.02) & (1 - l1 - l2 >= -0.02)
+        zona[max(0, y0):min(h, y1), max(0, x0):min(w, x1)] |= dentro
+    print('ZONA sopra', quota, 'pixel', int(zona.sum()), 'di', w * h)
+    return zona.ravel()
+
 
 # la texture: più piccola e ridotta alla tavolozza
 immagini = {n.image for m in me.materials if m and m.use_nodes for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image}
@@ -133,6 +177,12 @@ for im in immagini:
         d = ((l[a:a + 65536, None, :] - colori_lab[None]) ** 2).sum(2)
         scelta[a:a + 65536] = d.argmin(1)
     px[:, :3] = colori[scelta]
+    if CAMBIA:
+        # un colore della tavolozza diventa un altro (l'albero verde nato dalla forma di quello arancio)
+        cambi = json.load(open(CAMBIA))
+        dove = zona_sopra(cambi['sopra'], w, h, cambi.get('tronco')) if 'sopra' in cambi else np.ones(w * h, bool)
+        for i, rgb in cambi['cambi'].items():
+            px[(scelta == int(i)) & dove, :3] = np.array(rgb, dtype=np.float32) / 255.0
     im.pixels.foreach_set(px.ravel())
     im.update()
     uso = np.bincount(scelta, minlength=len(colori)) / len(scelta)
