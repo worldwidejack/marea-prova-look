@@ -25,13 +25,18 @@ import numpy as np
 from PIL import Image
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAREA = os.environ.get('MAREA', os.path.expanduser('~/Desktop/JACK/_GITHUB/marea/.claude/worktrees/prova-armi'))
+# la cartella di MAREA (serve tools/sprite e assets/concept/personaggio): $MAREA, sennò ../marea accanto a questa
+MAREA = os.environ.get('MAREA') or next((p for p in (os.path.join(os.path.dirname(QUI), 'marea'),
+                                                     os.path.expanduser('~/Desktop/JACK/_GITHUB/marea/.claude/worktrees/prova-armi'))
+                                         if os.path.exists(os.path.join(p, 'tools', 'sprite', 'pixel.py'))), '')
+if not MAREA:
+    sys.exit('manca MAREA: clona worldwidejack/marea accanto a questa cartella (../marea) o dai MAREA=<cartella di marea>')
 sys.path.insert(0, os.path.join(MAREA, 'tools', 'sprite'))
 from pixel import celle, da_esadecimale, quantizza, rimpicciolisci  # noqa: E402
 
 MOSSE = ['leggera', 'pesante', 'onda']
 ALTO = 48
-TAVOLOZZA = os.path.join(MAREA, 'assets', 'concept', 'sprite', 'protagonista', 'sprite', 'tavolozza.json')
+TAVOLOZZA = os.path.join(QUI, 'concept', 'armi', 'tavolozza.json')  # i 16 colori di F3 (dalla camminata originale)
 
 
 def ciano(rgba):

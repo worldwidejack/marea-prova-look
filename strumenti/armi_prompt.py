@@ -13,7 +13,12 @@ import os
 import sys
 
 QUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAREA = os.environ.get('MAREA', os.path.expanduser('~/Desktop/JACK/_GITHUB/marea/.claude/worktrees/prova-armi'))
+# la cartella di MAREA (serve tools/sprite e assets/concept/personaggio): $MAREA, sennò ../marea accanto a questa
+MAREA = os.environ.get('MAREA') or next((p for p in (os.path.join(os.path.dirname(QUI), 'marea'),
+                                                     os.path.expanduser('~/Desktop/JACK/_GITHUB/marea/.claude/worktrees/prova-armi'))
+                                         if os.path.exists(os.path.join(p, 'tools', 'sprite', 'pixel.py'))), '')
+if not MAREA:
+    sys.exit('manca MAREA: clona worldwidejack/marea accanto a questa cartella (../marea) o dai MAREA=<cartella di marea>')
 sys.path.insert(0, os.path.join(MAREA, 'tools', 'sprite'))
 from comune import CODICI, GIRO2, VISTE_MODELLO  # noqa: E402
 from prompt import DALL_ALTO, FRASE, STILE  # noqa: E402
