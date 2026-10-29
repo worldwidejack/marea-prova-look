@@ -19,7 +19,7 @@
     #velo { position: fixed; inset: 0; z-index: 2; background: #1c1412; opacity: 0; pointer-events: none; transition: opacity .25s; }
     #velo.su { opacity: 1; }
     /* mosse: bottoni tondi sopra il bottone A (sul telefono si usano col pollice destro) */
-    #mosse { position: fixed; z-index: 1; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; }
+    #mosse { position: fixed; z-index: 1; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: calc(100vw - 36px); }
     #mosse button { padding: 10px 13px; border: 3px solid var(--bordo); border-radius: 14px; background: var(--carta); color: var(--inchiostro); font: 700 14px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 3px 0 #15100e; }
     #mosse button:active { transform: translateY(2px); box-shadow: 0 1px 0 #15100e; }
     #aiuto .dito { display: none; }
