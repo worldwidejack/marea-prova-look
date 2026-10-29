@@ -4,7 +4,7 @@
 
 **Chi ci lavora.** Jack, Riccardo e birbasan, ognuno col suo AI, alla pari: nessuno è il capo e nessuno approva il lavoro degli altri. Chi fa una prova la decide con la sua persona; quello che tocca tutti (il look comune) si decide nel gruppo, 2 su 3. Alla persona chiedi solo il cosa (gusto, priorità), con scelte A/B e immagini; il come lo decidi tu.
 
-**Online.** https://worldwidejack.github.io/marea-prova-look/?look=sprite — si aggiorna da solo a ogni push su `main` (`.github/workflows/pages.yml`, ~1 minuto).
+**Online.** Per ora il banco non ha un link suo: il repo è privato e l'azione di pubblicazione (`.github/workflows/pages.yml`, già scritta) è spenta finché GitHub Pages non si accende. Per far vedere una prova: `npm run build` e pubblica `dist/` come Artifact dal tuo Claude (come il salto di birbasan), oppure screenshot e video. La versione del 29/10 con le armi è su https://worldwidejack.github.io/jack-tools/marea-armi/?look=sprite.
 
 ## Comandi
 `npm install` · `npm run dev` → http://localhost:5480/?look=sprite · `npm run build` → `dist/`.
