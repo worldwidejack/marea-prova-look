@@ -19,6 +19,7 @@ import { SPESSORE, sagomaDietro } from './inchiostro.js';
 import { creaPixel } from './pixel.js';
 import { creaNumeri } from './numeri.js';
 import { creaEffetti } from './effetti.js';
+import { creaArmi, ARMI } from './armi.js';
 
 THREE.ColorManagement.enabled = false; // i colori dei disegni passano così come sono
 
@@ -47,6 +48,14 @@ const [sprite, pronti] = await Promise.all([caricaSprite('./sprite/', { salta })
 const fab = creaFabbrica(scena, sprite);
 // la versione di Riccardo: il protagonista disegnato a pixel (9 viste, a sinistra lo specchio), se i disegni ci sono
 const spritePx = LOOK === 'sprite' ? await caricaSprite('./sprite_pixel/', { nitido: true, formato: 'png' }).catch(() => null) : null;
+// prova delle armi (29/10): camminate con l'arma leggera o pesante e onda energetica, nella stessa fabbrica del protagonista
+const spriteArmi = spritePx ? await caricaSprite('./sprite_armi/', { nitido: true, formato: 'png' }).catch(() => null) : null;
+if (spriteArmi) {
+  for (const [n, d] of Object.entries(spriteArmi.elenco)) {
+    if (n.endsWith('_sopra')) d.avanti = 0.54; // davanti all'arma (che sta 0,12 davanti allo sprite)
+    spritePx.elenco[n] = d; spritePx.texture[n] = spriteArmi.texture[n];
+  }
+}
 const fabPx = spritePx ? creaFabbrica(scena, spritePx) : null;
 const PASSI = ['S', 'SE', 'E', 'NE', 'N'].every((d) => sprite.elenco[`eroe_${d}_4`]);
 // il protagonista a sprite: 16 direzioni se ci sono le viste di mezzo (SSE, ESE, ENE, NNE), sennò 8 (?dir=8 per confrontare)
@@ -58,6 +67,7 @@ function vistaDa(angolo, n = DIREZIONI) {
 }
 const fab3 = creaFabbricaModelli(scena, pronti);
 const effetti = creaEffetti(scena);
+const armi = fabPx && spriteArmi ? await creaArmi(scena, fabPx, spritePx.elenco, () => pixel.unita()) : null;
 // gli edifici e la barca in 3D appena c'è il modello; le persone in 3D solo nei look col personaggio 3D
 const PERSONE = /^(pescatore|barista|eroe)/;
 const in3d = (nome) => fab3.ha(nome) && !(LOOK === 'sprite' && PERSONE.test(nome));
@@ -145,7 +155,11 @@ function fotogrammaEroe() {
     const k = m.t / m.durata;
     if (m.tipo === 'scatto') return `${vista}_scatto_${k < 0.1 ? 1 : k < 0.3 ? 2 : k < 0.75 ? 3 : 4}`;
     if (m.tipo === 'bevi') return `${vista}_bevi_${k < 0.25 ? 1 : k < 0.42 ? 2 : k < 0.78 ? 3 : 4}`;
+    if (m.tipo === 'onda' && fabPx.ha(`${vista}_onda_1`)) return `${vista}_onda_${k < 0.15 ? 1 : k < 0.45 ? 2 : k < 0.55 ? 3 : 4}`;
   }
+  // con l'arma: la camminata con l'impugnatura giusta (il 2 a gambe unite fa da posa ferma)
+  const cl = armi?.arma()?.classe;
+  if (cl && fabPx.ha(`${vista}_${cl}_1`)) return `${vista}_${cl}_${eroe.fermo ? 2 : 1 + (Math.floor(eroe.passo * 0.9) % 4)}`;
   if (eroe.fermo) return `${vista}_cammina_2`;
   return `${vista}_cammina_${1 + (Math.floor(eroe.passo * 0.9) % 4)}`;
 }
@@ -194,6 +208,9 @@ addEventListener('keydown', (e) => {
   else if (e.key === ' ') scatto();
   else if (e.key.toLowerCase() === 'q') bevi();
   else if (e.key.toLowerCase() === 'c') giraCamera();
+  else if (e.key.toLowerCase() === 'f') ondaEnergetica();
+  else if (e.key.toLowerCase() === 'r') cambiaArma();
+  else if (armi && /^[0-6]$/.test(e.key)) { armi.scegli(+e.key - 1); scriviArma(); }
 });
 addEventListener('keyup', (e) => tasti.delete(e.key.toLowerCase()));
 addEventListener('blur', () => tasti.clear());
@@ -268,7 +285,7 @@ function azione() {
 }
 bottone.addEventListener('click', (e) => { e.stopPropagation(); azione(); });
 bottone.addEventListener('pointerdown', (e) => e.stopPropagation());
-for (const [id, fn] of [['bScatto', () => scatto()], ['bPozione', () => bevi()], ['bCamera', () => giraCamera()]]) {
+for (const [id, fn] of [['bScatto', () => scatto()], ['bPozione', () => bevi()], ['bCamera', () => giraCamera()], ['bArma', () => cambiaArma()], ['bOnda', () => ondaEnergetica()]]) {
   const b = document.getElementById(id);
   b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -295,6 +312,16 @@ function bevi() {
   if (modo !== 'fuori' || eroe.mossa) return;
   eroe.mossa = { tipo: 'bevi', t: 0, durata: 2.6, fatto: false };
   if (EROE3D && !suona('bevi', 0.15, 1.5, true)) suona('fermo', 0.15);
+}
+// prova delle armi: cambiare arma (a mani vuote → katana → … → lancia → a mani vuote) e l'onda energetica
+function cambiaArma() { if (armi) { armi.prossima(); scriviArma(); } }
+function scriviArma() { const b = document.getElementById('bArma'); if (b) b.textContent = armi?.arma()?.nome ?? 'arma'; }
+if (!armi) for (const id of ['bArma', 'bOnda']) document.getElementById(id).style.display = 'none';
+function ondaEnergetica() {
+  if (!armi || modo !== 'fuori' || eroe.mossa) return;
+  eroe.mossa = { tipo: 'onda', t: 0, durata: 2.1 };
+  armi.partiOnda(eroe.angolo);
+  effetti.polvere(eroe.x, quotaDi(eroe.x, eroe.z), eroe.z, 0, 0);
 }
 // la mossa in corso: true = il protagonista è occupato (niente passi dai comandi)
 function aggiornaMossa(dt, y) {
@@ -331,6 +358,10 @@ function aggiornaMossa(dt, y) {
     // l'effetto parte quando la bottiglia arriva alla bocca (Mixamo a 1,5×: ~1,5 s; disegni a pixel: il 3° disegno)
     if (!m.fatto && m.t > 1.5) { m.fatto = true; effetti.effettoPozione(eroe.x, y, eroe.z); }
     if (k >= 1) eroe.mossa = null;
+    return true;
+  }
+  if (m.tipo === 'onda') {
+    if (k >= 1) { eroe.mossa = null; armi.fineOnda(); }
     return true;
   }
   return false;
@@ -393,6 +424,10 @@ function aggiornaEroe(dt) {
   // a pixel: il disegno sta sulla griglia dei pixel dello schermo (ogni suo pixel su un pixel)
   const q = fabPx && pixel ? pixel.agganciaPunto(eroe.x, y, eroe.z) : new THREE.Vector3(eroe.x, y + salto, eroe.z);
   eroe.o.sposta(q.x, q.y, q.z);
+  if (armi) {
+    armi.dopo(n, eroe.specchio, q);
+    if (eroe.mossa?.tipo === 'onda') armi.passoOnda(dt, n, eroe.specchio, q, Math.min(1, eroe.mossa.t / eroe.mossa.durata), tempo);
+  }
   if (fabPx && eroe.mossa?.tipo === 'scatto' && (eroe.mossa.sciaPx = (eroe.mossa.sciaPx ?? 0) - dt) <= 0 && eroe.mossa.t < eroe.mossa.durata * 0.75) {
     sciaPixel(n, eroe.specchio, q); eroe.mossa.sciaPx = 0.06;
   }
@@ -466,6 +501,7 @@ function passo(dt) {
       eroe.fermo = true; eroe.mossa = null;
       const b = barca.posizione(), q = pixel.agganciaPunto(b.x, 0.05, b.z);
       eroe.o.disegno(fotogrammaEroe(), eroe.specchio); eroe.o.sposta(q.x, q.y, q.z);
+      armi?.dopo(null, false, q, false);
     }
   }
   else interno.aggiorna(dt, ingresso());
@@ -480,6 +516,8 @@ function passo(dt) {
 function disegna() {
   if (modo === 'dentro') { interno.disegna(); return; }
   let b = new THREE.Vector3(segui.x, quotaDi(segui.x, segui.z) * 0.5, segui.z);
+  const sc = armi?.scossa(tempo);
+  if (sc) b.add(sc);
   if (pixel) b = pixel.aggancia(b);
   camera.guarda(b.x, b.y, b.z);
   FOSCHIA.uCentro.value.set(segui.x, quotaDi(segui.x, segui.z), segui.z);
@@ -504,6 +542,7 @@ requestAnimationFrame(fotogramma);
 // per le prove: teletrasporto, foto e numeri
 window.prova = {
   look: LOOK, mettiEroe, eroe, lato: LATO, libero, quotaDi, mondo, numeri: () => numeri.leggi(), scatto, bevi, giraCamera, tasti, camera,
+  arma: (i) => { armi?.scegli(i); scriviArma(); return armi?.arma()?.nome ?? null; }, onda: () => ondaEnergetica(), armi, elenco: spritePx?.elenco,
   entra: () => { if (interno) { modo = 'dentro'; interno.entra(); } },
   sali: () => { if (barca.puoSalire(eroe)) azione(); },
   esci: () => { if (modo === 'dentro') azione(); },
